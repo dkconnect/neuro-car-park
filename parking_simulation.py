@@ -10,13 +10,13 @@ app.config['SECRET_KEY'] = 'secret!'
 
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 800
-FPS = 60
+FPS = 120
 CAR_LENGTH = 40
 CAR_WIDTH = 20
-MAX_SPEED = 5  # Increased for faster movement, only for now lets see might edit later
+MAX_SPEED = 10  # Increased for faster movement, only for now lets see might edit later
 MAX_STEERING_ANGLE = math.radians(30)
-ACCELERATION_RATE = 0.2  # Increased for faster acceleration, same i m makring so i can edit later
-BRAKING_RATE = 0.2
+ACCELERATION_RATE = 0.5  # Increased for faster acceleration, same i m makring so i can edit later
+BRAKING_RATE = 0.5
 TURN_RATE = math.radians(5)  # smooth steer
 POPULATION_SIZE = 10
 MUTATION_RATE = 0.2
