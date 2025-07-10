@@ -11,13 +11,42 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
             background-color: #333;
             color: #eee;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             box-sizing: border-box;
+        }
+        .navbar {
+            width: 100%;
+            background-color: #222;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        .navbar-left {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .navbar-right {
+            display: flex;
+            gap: 10px;
+        }
+        .navbar-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        .navbar-button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
         }
         .container {
             background-color: #222;
@@ -30,6 +59,7 @@
             gap: 20px;
             width: 100%;
             max-width: 1050px;
+            margin: 20px auto;
         }
         canvas {
             background-color: rgb(150, 150, 150);
@@ -89,9 +119,27 @@
         .status-message.warning { background-color: #ffc107; color: #333; }
         .status-message.error { background-color: #dc3545; }
         .status-message.done { background-color: #6c757d; }
+        footer {
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            background-color: #222;
+            color: #bbb;
+            font-size: 0.8rem;
+            margin-top: auto;
+        }
     </style>
 </head>
-<body>
+<body class="flex flex-col min-h-screen">
+    <nav class="navbar">
+        <div class="navbar-left">
+            Created by Lucifer - 2025
+        </div>
+        <div class="navbar-right">
+            <a href="https://github.com/dkconnect/neuro-car-park" target="_blank" class="navbar-button">GitHub</a>
+            <a href="/study.html" class="navbar-button">Study Paper</a>
+        </div>
+    </nav>
     <div class="container">
         <h1 class="text-2xl font-bold text-white mb-4">Neuro Car Parking</h1>
         <canvas id="gameCanvas" width="1000" height="800" class="rounded-lg"></canvas>
@@ -107,6 +155,9 @@
             <div id="simulationStatus" class="status-message">Ready.</div>
         </div>
     </div>
+    <footer>
+        Neural Algorithm Car Parking Simulation | Created by Lucifer - 2025
+    </footer>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
