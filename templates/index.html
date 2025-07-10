@@ -107,11 +107,9 @@
             <div id="simulationStatus" class="status-message">Ready.</div>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const socket = io();
         let environment = { roadSegments: [], parkingSpots: [], screen: { width: 0, height: 0 } };
         let currentCarData = null;
         let targetSpotIndex = -1;
@@ -129,6 +127,7 @@
         const carSpeedSpan = document.getElementById('carSpeed');
         const carSteeringSpan = document.getElementById('carSteering');
         const simulationStatusDiv = document.getElementById('simulationStatus');
+        let pollInterval = null;
 
         function drawEnvironment() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -200,12 +199,20 @@
             carSteeringSpan.textContent = data.car ? (data.car.steering_angle * 180 / Math.PI).toFixed(1) : '0.0';
             simulationStatusDiv.textContent = `Car Status: ${data.status.replace(/_/g, ' ').toUpperCase()}`;
             simulationStatusDiv.className = 'status-message';
-            if (data.status === 'collided') {
+            if (data.status.includes('error')) {
                 simulationStatusDiv.classList.add('error');
-            } else if (data.status === 'parked') {
+            } else if (data.status === 'success' || data.status === 'parked') {
                 simulationStatusDiv.classList.add('success');
-            } else if (data.status === 'failed_to_park') {
+                clearInterval(pollInterval);
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            } else if (data.status === 'failed_to_park' || data.status === 'max_generations') {
                 simulationStatusDiv.classList.add('warning');
+            } else if (data.status === 'done') {
+                simulationStatusDiv.classList.add('done');
+                clearInterval(pollInterval);
+                startButton.disabled = false;
+                stopButton.disabled = true;
             } else {
                 simulationStatusDiv.classList.add('info');
             }
@@ -216,69 +223,57 @@
             drawEnvironment();
             if (currentCarData) {
                 drawCar(currentCarData);
-            } else {
-                console.warn("No car data available for rendering");
             }
             requestAnimationFrame(animate);
         }
 
-        socket.on('connect', () => {
-            console.log('Connected to server');
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            simulationStatusDiv.textContent = 'Connected. Click Start Simulation.';
-            simulationStatusDiv.className = 'status-message info';
-            socket.emit('request_environment_data');
-        });
+        function pollSimulationState() {
+            fetch('/get_simulation_state')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Poll data:", data);
+                    currentCarData = data.car;
+                    targetSpotIndex = data.target_spot_index;
+                    updateUI(data);
+                })
+                .catch(error => {
+                    console.error("Polling error:", error);
+                    simulationStatusDiv.textContent = `Error: ${error.message}`;
+                    simulationStatusDiv.className = 'status-message error';
+                    clearInterval(pollInterval);
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                });
+        }
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            startButton.disabled = true;
-            stopButton.disabled = true;
-            simulationStatusDiv.textContent = 'Disconnected.';
-            simulationStatusDiv.className = 'status-message error';
-        });
-
-        socket.on('environment_data', (data) => {
-            console.log('Environment data:', data);
-            environment.roadSegments = data.road_segments;
-            environment.parkingSpots = data.parking_spots;
-            environment.screen.width = data.screen_width;
-            environment.screen.height = data.screen_height;
-            canvas.width = data.screen_width;
-            canvas.height = data.screen_height;
-            drawEnvironment();
-        });
-
-        socket.on('update_simulation', (data) => {
-            console.log("Received update_simulation:", data);
-            if (!data.car) {
-                console.warn("No car data in update_simulation");
-            }
-            currentCarData = data.car;
-            targetSpotIndex = data.target_spot_index;
-            updateUI(data);
-        });
-
-        socket.on('simulation_status', (data) => {
-            simulationStatusDiv.textContent = data.message;
-            simulationStatusDiv.className = 'status-message';
-            simulationStatusDiv.classList.add(data.type);
-            if (data.type === 'success' || data.type === 'done') {
-                startButton.disabled = false;
-                stopButton.disabled = true;
-            } else if (data.type === 'info') {
-                startButton.disabled = true;
-                stopButton.disabled = false;
-            }
-        });
+        fetch('/get_environment_data')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Environment data:', data);
+                environment.roadSegments = data.road_segments;
+                environment.parkingSpots = data.parking_spots;
+                environment.screen.width = data.screen_width;
+                environment.screen.height = data.screen_height;
+                canvas.width = data.screen_width;
+                canvas.height = data.screen_height;
+                drawEnvironment();
+            })
+            .catch(error => console.error("Environment fetch error:", error));
 
         startButton.addEventListener('click', () => {
             startButton.disabled = true;
             stopButton.disabled = false;
             simulationStatusDiv.textContent = 'Simulation started...';
             simulationStatusDiv.className = 'status-message info';
-            socket.emit('start_sim');
+            fetch('/start_sim', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    simulationStatusDiv.textContent = data.message;
+                    simulationStatusDiv.className = `status-message ${data.type}`;
+                    if (data.type === 'info') {
+                        pollInterval = setInterval(pollSimulationState, 100);
+                    }
+                });
         });
 
         stopButton.addEventListener('click', () => {
@@ -286,7 +281,13 @@
             stopButton.disabled = true;
             simulationStatusDiv.textContent = 'Stopping simulation...';
             simulationStatusDiv.className = 'status-message warning';
-            socket.emit('stop_sim');
+            fetch('/stop_sim', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    simulationStatusDiv.textContent = data.message;
+                    simulationStatusDiv.className = `status-message ${data.type}`;
+                    clearInterval(pollInterval);
+                });
         });
 
         animate();
