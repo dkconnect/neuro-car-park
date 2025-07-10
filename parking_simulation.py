@@ -1,15 +1,12 @@
-import pygame
 import numpy as np
 import random
 import math
 import time
 import threading
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 800
@@ -34,19 +31,18 @@ COLORS = {
     "RED": [255, 0, 0], "GREEN": [0, 255, 0], "BLUE": [0, 0, 255]
 }
 
-ROAD_SEGMENTS_PYGAME = [
-    pygame.Rect(100, 0, 80, 800),
-    pygame.Rect(180, 100, 200, 80),
-    pygame.Rect(180, 450, 200, 80),
-    pygame.Rect(380, 450, 80, 350)
+ROAD_SEGMENTS = [
+    {'x': 100, 'y': 0, 'width': 80, 'height': 800},
+    {'x': 180, 'y': 100, 'width': 200, 'height': 80},
+    {'x': 180, 'y': 450, 'width': 200, 'height': 80},
+    {'x': 380, 'y': 450, 'width': 80, 'height': 350}
 ]
-PARKING_SPOTS_PYGAME = [
-    pygame.Rect(400, 50, 100, 50), pygame.Rect(510, 50, 100, 50), pygame.Rect(620, 50, 100, 50),
-    pygame.Rect(470, 450, 50, 100), pygame.Rect(470, 560, 50, 100),
-    pygame.Rect(470, 670, 50, 100), pygame.Rect(470, 780, 50, 100)
+PARKING_SPOTS = [
+    {'x': 400, 'y': 50, 'width': 100, 'height': 50}, {'x': 510, 'y': 50, 'width': 100, 'height': 50},
+    {'x': 620, 'y': 50, 'width': 100, 'height': 50}, {'x': 470, 'y': 450, 'width': 50, 'height': 100},
+    {'x': 470, 'y': 560, 'width': 50, 'height': 100}, {'x': 470, 'y': 670, 'width': 50, 'height': 100},
+    {'x': 470, 'y': 780, 'width': 50, 'height': 100}
 ]
-ROAD_SEGMENTS = [{'x': r.x, 'y': r.y, 'width': r.width, 'height': r.height} for r in ROAD_SEGMENTS_PYGAME]
-PARKING_SPOTS = [{'x': r.x, 'y': r.y, 'width': r.width, 'height': r.height} for r in PARKING_SPOTS_PYGAME]
 
 class Car:
     def __init__(self, x, y, angle=0):
@@ -92,11 +88,12 @@ class Car:
         return rotated_corners
 
     def get_rect(self):
-        min_x = min(c[0] for c in self.get_corners())
-        max_x = max(c[0] for c in self.get_corners())
-        min_y = min(c[1] for c in self.get_corners())
-        max_y = max(c[1] for c in self.get_corners())
-        return pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+        corners = self.get_corners()
+        min_x = min(c[0] for c in corners)
+        max_x = max(c[0] for c in corners)
+        min_y = min(c[1] for c in corners)
+        max_y = max(c[1] for c in corners)
+        return {'x': min_x, 'y': min_y, 'width': max_x - min_x, 'height': max_y - min_y}
 
     def to_dict(self):
         return {
@@ -106,7 +103,6 @@ class Car:
             'corners': self.get_corners()
         }
 
-# --- Collision Detection ---
 def point_in_polygon(point, polygon):
     x, y = point
     num_vertices = len(polygon)
@@ -133,29 +129,29 @@ def polygons_intersect(poly1, poly2):
             return True
     return False
 
-def check_environment_collision(car, environment_rects):
-    car_corners = car.get_corners()
-    for rect in environment_rects:
-        rect_poly = [(rect.left, rect.top), (rect.right, rect.top),
-                     (rect.right, rect.bottom), (rect.left, rect.bottom)]
-        if polygons_intersect(car_corners, rect_poly):
-            return True
-    return False
+def rect_collide(rect1, rect2):
+    return (rect1['x'] < rect2['x'] + rect2['width'] and
+            rect1['x'] + rect1['width'] > rect2['x'] and
+            rect1['y'] < rect2['y'] + rect2['height'] and
+            rect1['y'] + rect1['height'] > rect2['y'])
 
 def is_on_road_or_parking(car):
     car_rect = car.get_rect()
     buffer = 5
-    buffered_rect = pygame.Rect(car_rect.x - buffer, car_rect.y - buffer,
-                               car_rect.width + 2 * buffer, car_rect.height + 2 * buffer)
-    for road in ROAD_SEGMENTS_PYGAME:
-        if buffered_rect.colliderect(road):
+    buffered_rect = {
+        'x': car_rect['x'] - buffer,
+        'y': car_rect['y'] - buffer,
+        'width': car_rect['width'] + 2 * buffer,
+        'height': car_rect['height'] + 2 * buffer
+    }
+    for road in ROAD_SEGMENTS:
+        if rect_collide(buffered_rect, road):
             return True
-    for parking in PARKING_SPOTS_PYGAME:
-        if buffered_rect.colliderect(parking):
+    for parking in PARKING_SPOTS:
+        if rect_collide(buffered_rect, parking):
             return True
     return False
 
-# --- Neural Network Class ---
 class NeuralNetwork:
     def __init__(self, input_size, hidden_size, output_size):
         self.input_size = input_size
@@ -189,7 +185,6 @@ class NeuralNetwork:
         self.weights2 = weights['w2']
         self.bias2 = weights['b2']
 
-# --- Genetic Algorithm Class ---
 class GeneticAlgorithm:
     def __init__(self, input_size, hidden_size, output_size, population_size=POPULATION_SIZE,
                  mutation_rate=MUTATION_RATE):
@@ -204,26 +199,26 @@ class GeneticAlgorithm:
         return [{'nn': NeuralNetwork(self.input_size, self.hidden_size, self.output_size), 'fitness': 0}
                 for _ in range(self.population_size)]
 
-    def calculate_fitness(self, car, target_parking_spot_dict):
-        target_parking_spot = pygame.Rect(target_parking_spot_dict['x'],
-                                         target_parking_spot_dict['y'],
-                                         target_parking_spot_dict['width'],
-                                         target_parking_spot_dict['height'])
+    def calculate_fitness(self, car, target_parking_spot):
         fitness = 0
         if car.collided:
             fitness -= 500
             return fitness
-        target_center_x = target_parking_spot.centerx
-        target_center_y = target_parking_spot.centery
+        target_center_x = target_parking_spot['x'] + target_parking_spot['width'] / 2
+        target_center_y = target_parking_spot['y'] + target_parking_spot['height'] / 2
         distance = math.sqrt((car.x - target_center_x)**2 + (car.y - target_center_y)**2)
         fitness += max(0, 1000 - distance)
         if is_on_road_or_parking(car):
             fitness += 100
-        if target_parking_spot.contains(car.get_rect()):
+        car_rect = car.get_rect()
+        if (car_rect['x'] >= target_parking_spot['x'] and
+            car_rect['x'] + car_rect['width'] <= target_parking_spot['x'] + target_parking_spot['width'] and
+            car_rect['y'] >= target_parking_spot['y'] and
+            car_rect['y'] + car_rect['height'] <= target_parking_spot['y'] + target_parking_spot['height']):
             fitness += 500
             car.is_parked = True
             fitness += 1000
-            target_angle = 0 if target_parking_spot.width > target_parking_spot.height else math.pi / 2
+            target_angle = 0 if target_parking_spot['width'] > target_parking_spot['height'] else math.pi / 2
             angle_diff = abs(car.angle - target_angle) % (2 * math.pi)
             if angle_diff > math.pi:
                 angle_diff = 2 * math.pi - angle_diff
@@ -292,18 +287,27 @@ class GeneticAlgorithm:
             next_population.append({'nn': child, 'fitness': 0})
         self.population = next_population
 
-# --- Global Simulation State ---
 simulation_running = False
 simulation_thread = None
 ga_instance = None
 current_generation_num = 0
+car_simulation_steps = 0
+simulation_state = {
+    'car': None,
+    'target_spot_index': -1,
+    'current_generation': 0,
+    'current_car_in_gen': 0,
+    'max_cars_in_gen': POPULATION_SIZE,
+    'steps': 0,
+    'max_steps': MAX_STEPS_PER_CAR,
+    'status': 'ready'
+}
 INPUT_SIZE = 9
 HIDDEN_SIZE = 16
 OUTPUT_SIZE = 2
 
-# --- Main Simulation Logic ---
 def run_simulation_logic():
-    global simulation_running, ga_instance, current_generation_num, car_simulation_steps
+    global simulation_running, ga_instance, current_generation_num, car_simulation_steps, simulation_state
     try:
         if ga_instance is None:
             ga_instance = GeneticAlgorithm(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE)
@@ -321,7 +325,7 @@ def run_simulation_logic():
                 nn = individual['nn']
                 car_index = i % len(target_parking_spots)
                 target_parking_spot = target_parking_spots[car_index]
-                start_x = ROAD_SEGMENTS_PYGAME[0].centerx
+                start_x = ROAD_SEGMENTS[0]['x'] + ROAD_SEGMENTS[0]['width'] / 2
                 start_y = SCREEN_HEIGHT - CAR_LENGTH / 2
                 car = Car(start_x, start_y, angle=math.radians(-90))
                 if not is_on_road_or_parking(car):
@@ -330,11 +334,14 @@ def run_simulation_logic():
                 car_simulation_steps = 0
                 car_parked_successfully = False
 
-                socketio.emit('update_simulation', {
-                    'car': car.to_dict(), 'target_spot_index': car_index,
+                simulation_state.update({
+                    'car': car.to_dict(),
+                    'target_spot_index': car_index,
                     'current_generation': current_generation_num + 1,
-                    'current_car_in_gen': i + 1, 'max_cars_in_gen': POPULATION_SIZE,
-                    'steps': car_simulation_steps, 'max_steps': MAX_STEPS_PER_CAR,
+                    'current_car_in_gen': i + 1,
+                    'max_cars_in_gen': POPULATION_SIZE,
+                    'steps': car_simulation_steps,
+                    'max_steps': MAX_STEPS_PER_CAR,
                     'status': 'moving'
                 })
                 time.sleep(SIMULATION_TICK_RATE)
@@ -352,15 +359,15 @@ def run_simulation_logic():
                         for step in range(1, max_ray_dist, 5):
                             test_x = car.x + step * math.cos(ray_angle)
                             test_y = car.y + step * math.sin(ray_angle)
-                            test_point_rect = pygame.Rect(test_x - 1, test_y - 1, 2, 2)
+                            test_point_rect = {'x': test_x - 1, 'y': test_y - 1, 'width': 2, 'height': 2}
                             is_valid_path = False
-                            for road_seg in ROAD_SEGMENTS_PYGAME:
-                                if test_point_rect.colliderect(road_seg):
+                            for road_seg in ROAD_SEGMENTS:
+                                if rect_collide(test_point_rect, road_seg):
                                     is_valid_path = True
                                     break
                             if not is_valid_path:
-                                for parking_spot in PARKING_SPOTS_PYGAME:
-                                    if test_point_rect.colliderect(parking_spot):
+                                for parking_spot in PARKING_SPOTS:
+                                    if rect_collide(test_point_rect, parking_spot):
                                         is_valid_path = True
                                         break
                             if not is_valid_path:
@@ -395,20 +402,26 @@ def run_simulation_logic():
                         generation_successful = False
                         print(f"Car {i+1} collided. Generation failed!")
                         break
-                    target_parking_rect = pygame.Rect(target_parking_spot['x'], target_parking_spot['y'],
-                                                     target_parking_spot['width'], target_parking_spot['height'])
-                    if target_parking_rect.contains(car.get_rect()) and abs(car.speed) < 0.5:
+                    car_rect = car.get_rect()
+                    if (car_rect['x'] >= target_parking_spot['x'] and
+                        car_rect['x'] + car_rect['width'] <= target_parking_spot['x'] + target_parking_spot['width'] and
+                        car_rect['y'] >= target_parking_spot['y'] and
+                        car_rect['y'] + car_rect['height'] <= target_parking_spot['y'] + target_parking_spot['height'] and
+                        abs(car.speed) < 0.5):
                         car_parked_successfully = True
                         car.is_parked = True
                         print(f"Car {i+1} parked in Spot {car_index+1}!")
                         break
                     car_simulation_steps += 1
                     if car_simulation_steps % UPDATE_FREQUENCY == 0:
-                        socketio.emit('update_simulation', {
-                            'car': car.to_dict(), 'target_spot_index': car_index,
+                        simulation_state.update({
+                            'car': car.to_dict(),
+                            'target_spot_index': car_index,
                             'current_generation': current_generation_num + 1,
-                            'current_car_in_gen': i + 1, 'max_cars_in_gen': POPULATION_SIZE,
-                            'steps': car_simulation_steps, 'max_steps': MAX_STEPS_PER_CAR,
+                            'current_car_in_gen': i + 1,
+                            'max_cars_in_gen': POPULATION_SIZE,
+                            'steps': car_simulation_steps,
+                            'max_steps': MAX_STEPS_PER_CAR,
                             'status': 'collided' if car.collided else ('parked' if car.is_parked else 'moving')
                         })
                     time.sleep(SIMULATION_TICK_RATE)
@@ -421,11 +434,14 @@ def run_simulation_logic():
                     individual['fitness'] -= 500
                     generation_successful = False
                     print(f"Car {i+1} failed to park within {MAX_STEPS_PER_CAR} steps!")
-                    socketio.emit('update_simulation', {
-                        'car': car.to_dict(), 'target_spot_index': car_index,
+                    simulation_state.update({
+                        'car': car.to_dict(),
+                        'target_spot_index': car_index,
                         'current_generation': current_generation_num + 1,
-                        'current_car_in_gen': i + 1, 'max_cars_in_gen': POPULATION_SIZE,
-                        'steps': car_simulation_steps, 'max_steps': MAX_STEPS_PER_CAR,
+                        'current_car_in_gen': i + 1,
+                        'max_cars_in_gen': POPULATION_SIZE,
+                        'steps': car_simulation_steps,
+                        'max_steps': MAX_STEPS_PER_CAR,
                         'status': 'failed_to_park'
                     })
                     time.sleep(1)
@@ -435,81 +451,70 @@ def run_simulation_logic():
                       f"Max={max(ind['fitness'] for ind in ga_instance.population):.2f}")
                 if generation_successful:
                     print(f"Generation {current_generation_num + 1} SUCCESS!")
-                    socketio.emit('simulation_status', {'message': f"Generation {current_generation_num + 1} SUCCESS!", 'type': 'success'})
+                    simulation_state.update({'status': 'success'})
                     simulation_running = False
                 else:
                     print(f"Generation {current_generation_num + 1} FAILED. Evolving...")
-                    socketio.emit('simulation_status', {'message': f"Generation {current_generation_num + 1} FAILED. Evolving...", 'type': 'info'})
+                    simulation_state.update({'status': 'evolving'})
                     ga_instance.evolve()
                     current_generation_num += 1
                     if current_generation_num >= MAX_GENERATIONS:
                         print(f"Reached max generations ({MAX_GENERATIONS}). Resetting GA.")
-                        socketio.emit('simulation_status', {'message': f"Reached max generations ({MAX_GENERATIONS}). Resetting GA.", 'type': 'warning'})
+                        simulation_state.update({'status': 'max_generations'})
                         ga_instance = GeneticAlgorithm(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE)
                         current_generation_num = 0
     except Exception as e:
         print(f"Simulation thread error: {e}")
-        socketio.emit('simulation_status', {'message': f"Simulation crashed: {str(e)}", 'type': 'error'})
+        simulation_state.update({'status': f'error: {str(e)}'})
         simulation_running = False
     finally:
         simulation_running = False
         print("Simulation thread terminated.")
-        socketio.emit('simulation_status', {'message': 'Simulation terminated.', 'type': 'done'})
+        simulation_state.update({'status': 'done'})
 
-# --- Flask Routes and SocketIO Events ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@socketio.on('connect')
-def test_connect():
-    print('Client connected')
-    emit('environment_data', {
-        'road_segments': ROAD_SEGMENTS, 'parking_spots': PARKING_SPOTS,
-        'screen_width': SCREEN_WIDTH, 'screen_height': SCREEN_HEIGHT,
-        'car_length': CAR_LENGTH, 'car_width': CAR_WIDTH, 'colors': COLORS
-    })
-
-@socketio.on('disconnect')
-def test_disconnect():
-    global simulation_running
-    simulation_running = False
-    print('Client disconnected')
-
-@socketio.on('start_sim')
-def start_simulation_event():
-    global simulation_running, simulation_thread, ga_instance, current_generation_num
+@app.route('/start_sim', methods=['POST'])
+def start_simulation_endpoint():
+    global simulation_running, simulation_thread
     if not simulation_running:
         if simulation_thread and simulation_thread.is_alive():
-            emit('simulation_status', {'message': 'Simulation thread already running.', 'type': 'warning'})
-            return
+            return jsonify({'message': 'Simulation thread already running.', 'type': 'warning'})
         simulation_running = True
-        if ga_instance is None or current_generation_num >= MAX_GENERATIONS:
-            ga_instance = GeneticAlgorithm(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE)
-            current_generation_num = 0
-        try:
-            simulation_thread = threading.Thread(target=run_simulation_logic)
-            simulation_thread.daemon = True
-            simulation_thread.start()
-            print("Simulation thread started successfully.")
-            emit('simulation_status', {'message': 'Simulation started.', 'type': 'info'})
-        except Exception as e:
-            simulation_running = False
-            print(f"Error starting simulation thread: {e}")
-            emit('simulation_status', {'message': f"Error starting simulation: {str(e)}", 'type': 'error'})
-    else:
-        emit('simulation_status', {'message': 'Simulation already running.', 'type': 'warning'})
+        simulation_thread = threading.Thread(target=run_simulation_logic)
+        simulation_thread.daemon = True
+        simulation_thread.start()
+        print("Simulation thread started successfully.")
+        return jsonify({'message': 'Simulation started.', 'type': 'info'})
+    return jsonify({'message': 'Simulation already running.', 'type': 'warning'})
 
-@socketio.on('stop_sim')
-def stop_simulation_event():
+@app.route('/stop_sim', methods=['POST'])
+def stop_simulation_endpoint():
     global simulation_running
     if simulation_running:
         simulation_running = False
         print("Simulation stop requested.")
-        emit('simulation_status', {'message': 'Simulation stopped.', 'type': 'done'})
-    else:
-        emit('simulation_status', {'message': 'Simulation not running.', 'type': 'warning'})
+        return jsonify({'message': 'Simulation stopped.', 'type': 'done'})
+    return jsonify({'message': 'Simulation not running.', 'type': 'warning'})
+
+@app.route('/get_simulation_state')
+def get_simulation_state():
+    return jsonify(simulation_state)
+
+@app.route('/get_environment_data')
+def get_environment_data():
+    return jsonify({
+        'road_segments': ROAD_SEGMENTS,
+        'parking_spots': PARKING_SPOTS,
+        'screen_width': SCREEN_WIDTH,
+        'screen_height': SCREEN_HEIGHT,
+        'car_length': CAR_LENGTH,
+        'car_width': CAR_WIDTH,
+        'colors': COLORS
+    })
 
 if __name__ == '__main__':
-    print("Starting Flask-SocketIO server...")
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    import os
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
