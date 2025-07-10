@@ -1,0 +1,22 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "parking_simulation.py",
+        "use": "@vercel/python"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "parking_simulation.py"
+      },
+      {
+        "src": "/socket.io/(.*)",
+        "dest": "parking_simulation.py"
+      }
+    ],
+    "env": {
+      "PYTHON_VERSION": "3.9"
+    }
+  }

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuro Car Parking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #333;
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #222;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1050px;
+        }
+        canvas {
+            background-color: rgb(150, 150, 150);
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #555;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            background-color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .info-panel {
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            padding: 10px 15px;
+            width: 100%;
+            max-width: 960px;
+            text-align: center;
+            font-size: 0.9rem;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        .status-message {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status-message.success { background-color: #28a745; }
+        .status-message.info { background-color: #17a2b8; }
+        .status-message.warning { background-color: #ffc107; color: #333; }
+        .status-message.error { background-color: #dc3545; }
+        .status-message.done { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-2xl font-bold text-white mb-4">Neuro Car Parking</h1>
+        <canvas id="gameCanvas" width="1000" height="800" class="rounded-lg"></canvas>
+        <div class="controls">
+            <button id="startButton">Start Simulation</button>
+            <button id="stopButton" disabled>Stop Simulation</button>
+        </div>
+        <div class="info-panel">
+            <p>Generation: <span id="currentGen">0</span></p>
+            <p>Car in Gen: <span id="currentCar">0</span></p>
+            <p>Steps: <span id="currentSteps">0</span> / <span id="maxSteps">0</span></p>
+            <p>Speed: <span id="carSpeed">0.00</span> | Steering: <span id="carSteering">0.0</span>°</p>
+            <div id="simulationStatus" class="status-message">Ready.</div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const socket = io();
+        let environment = { roadSegments: [], parkingSpots: [], screen: { width: 0, height: 0 } };
+        let currentCarData = null;
+        let targetSpotIndex = -1;
+        const COLORS = {
+            "WHITE": 'rgb(255, 255, 255)', "BLACK": 'rgb(0, 0, 0)', "GRAY": 'rgb(150, 150, 150)',
+            "ROAD_COLOR": 'rgb(50, 50, 50)', "PARKING_COLOR": 'rgb(255, 200, 0)',
+            "RED": 'rgb(255, 0, 0)', "GREEN": 'rgb(0, 255, 0)', "BLUE": 'rgb(0, 0, 255)'
+        };
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const currentGenSpan = document.getElementById('currentGen');
+        const currentCarSpan = document.getElementById('currentCar');
+        const currentStepsSpan = document.getElementById('currentSteps');
+        const maxStepsSpan = document.getElementById('maxSteps');
+        const carSpeedSpan = document.getElementById('carSpeed');
+        const carSteeringSpan = document.getElementById('carSteering');
+        const simulationStatusDiv = document.getElementById('simulationStatus');
+
+        function drawEnvironment() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = COLORS.GRAY;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = COLORS.ROAD_COLOR;
+            environment.roadSegments.forEach(road => {
+                ctx.fillRect(road.x, road.y, road.width, road.height);
+                if (road.width > road.height) {
+                    for (let x_mark = road.x + 20; x_mark < road.x + road.width - 20; x_mark += 40) {
+                        ctx.strokeStyle = COLORS.WHITE;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x_mark, road.y + road.height / 2);
+                        ctx.lineTo(x_mark + 20, road.y + road.height / 2);
+                        ctx.stroke();
+                    }
+                } else {
+                    for (let y_mark = road.y + 20; y_mark < road.y + road.height - 20; y_mark += 40) {
+                        ctx.strokeStyle = COLORS.WHITE;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(road.x + road.width / 2, y_mark);
+                        ctx.lineTo(road.x + road.width / 2, y_mark + 20);
+                        ctx.stroke();
+                    }
+                }
+            });
+            environment.parkingSpots.forEach((parking, index) => {
+                ctx.fillStyle = COLORS.PARKING_COLOR;
+                ctx.fillRect(parking.x, parking.y, parking.width, parking.height);
+                if (index === targetSpotIndex) {
+                    ctx.strokeStyle = COLORS.GREEN;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(parking.x, parking.y, parking.width, parking.height);
+                }
+            });
+        }
+
+        function drawCar(car) {
+            if (!car || !car.corners) {
+                console.warn("drawCar: Car data or corners missing", car);
+                return;
+            }
+            ctx.fillStyle = `rgb(${car.color[0]}, ${car.color[1]}, ${car.color[2]})`;
+            ctx.beginPath();
+            ctx.moveTo(car.corners[0][0], car.corners[0][1]);
+            for (let i = 1; i < car.corners.length; i++) {
+                ctx.lineTo(car.corners[i][0], car.corners[i][1]);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = COLORS.RED;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(car.x, car.y);
+            const front_x = car.x + car.length / 2 * Math.cos(car.angle);
+            const front_y = car.y + car.length / 2 * Math.sin(car.angle);
+            ctx.lineTo(front_x, front_y);
+            ctx.stroke();
+        }
+
+        function updateUI(data) {
+            currentGenSpan.textContent = data.current_generation;
+            currentCarSpan.textContent = `${data.current_car_in_gen} / ${data.max_cars_in_gen}`;
+            currentStepsSpan.textContent = data.steps;
+            maxStepsSpan.textContent = data.max_steps;
+            carSpeedSpan.textContent = data.car ? data.car.speed.toFixed(2) : '0.00';
+            carSteeringSpan.textContent = data.car ? (data.car.steering_angle * 180 / Math.PI).toFixed(1) : '0.0';
+            simulationStatusDiv.textContent = `Car Status: ${data.status.replace(/_/g, ' ').toUpperCase()}`;
+            simulationStatusDiv.className = 'status-message';
+            if (data.status === 'collided') {
+                simulationStatusDiv.classList.add('error');
+            } else if (data.status === 'parked') {
+                simulationStatusDiv.classList.add('success');
+            } else if (data.status === 'failed_to_park') {
+                simulationStatusDiv.classList.add('warning');
+            } else {
+                simulationStatusDiv.classList.add('info');
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawEnvironment();
+            if (currentCarData) {
+                drawCar(currentCarData);
+            } else {
+                console.warn("No car data available for rendering");
+            }
+            requestAnimationFrame(animate);
+        }
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            simulationStatusDiv.textContent = 'Connected. Click Start Simulation.';
+            simulationStatusDiv.className = 'status-message info';
+            socket.emit('request_environment_data');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            startButton.disabled = true;
+            stopButton.disabled = true;
+            simulationStatusDiv.textContent = 'Disconnected.';
+            simulationStatusDiv.className = 'status-message error';
+        });
+
+        socket.on('environment_data', (data) => {
+            console.log('Environment data:', data);
+            environment.roadSegments = data.road_segments;
+            environment.parkingSpots = data.parking_spots;
+            environment.screen.width = data.screen_width;
+            environment.screen.height = data.screen_height;
+            canvas.width = data.screen_width;
+            canvas.height = data.screen_height;
+            drawEnvironment();
+        });
+
+        socket.on('update_simulation', (data) => {
+            console.log("Received update_simulation:", data);
+            if (!data.car) {
+                console.warn("No car data in update_simulation");
+            }
+            currentCarData = data.car;
+            targetSpotIndex = data.target_spot_index;
+            updateUI(data);
+        });
+
+        socket.on('simulation_status', (data) => {
+            simulationStatusDiv.textContent = data.message;
+            simulationStatusDiv.className = 'status-message';
+            simulationStatusDiv.classList.add(data.type);
+            if (data.type === 'success' || data.type === 'done') {
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            } else if (data.type === 'info') {
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            }
+        });
+
+        startButton.addEventListener('click', () => {
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            simulationStatusDiv.textContent = 'Simulation started...';
+            simulationStatusDiv.className = 'status-message info';
+            socket.emit('start_sim');
+        });
+
+        stopButton.addEventListener('click', () => {
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            simulationStatusDiv.textContent = 'Stopping simulation...';
+            simulationStatusDiv.className = 'status-message warning';
+            socket.emit('stop_sim');
+        });
+
+        animate();
+    </script>
+</body>
+</html>
