@@ -3,185 +3,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Car Parking Simulation</title>
+    <title>Neuro Car Parking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --bg-dark: #1a1a2e; /* Deep dark background */
+            --bg-medium: #1f283d; /* Slightly lighter for panels */
+            --text-light: #e0e0e0; /* Light gray text */
+            --accent-blue: #00bcd4; /* Cyan blue for accents */
+            --success-green: #4CAF50; /* Standard green */
+            --error-red: #f44336; /* Standard red */
+            --warning-orange: #ff9800; /* Standard orange */
+            --info-blue: #2196F3; /* Standard blue */
+            --border-color: rgba(255, 255, 255, 0.1); /* Subtle white border */
+            --shadow-light: rgba(0, 0, 0, 0.2);
+            --shadow-medium: rgba(0, 0, 0, 0.4);
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #2c3e50;
-            color: #ecf0f1;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
             display: flex;
             justify-content: center;
-            align-items: flex-start; 
+            align-items: center;
             min-height: 100vh;
-            padding: 20px;
             margin: 0;
+            padding: 20px;
             box-sizing: border-box;
+            line-height: 1.6;
         }
 
         .container {
             display: flex;
-            background-color: #34495e; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            background-color: var(--bg-medium);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px var(--shadow-medium);
             overflow: hidden;
-            max-width: 1200px; 
+            max-width: 1400px; /* Increased max-width */
             width: 100%;
+            min-height: 700px; /* Ensure sufficient height */
+        }
+
+        /* Canvas container and styling */
+        .canvas-container {
+            flex-grow: 1; /* Allows canvas to take available space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0d0d1a; /* Even darker background for the simulation area */
+            border-right: 1px solid var(--border-color);
+            position: relative; /* For overlay messages */
         }
 
         canvas {
-            border-right: 1px solid #4a627d;
-            background-color: #212F3D; 
-            display: block; 
+            display: block;
+            border-radius: 0 0 0 16px; /* Match container border-radius */
         }
 
+        /* Control panel styling */
         .controls-panel {
-            padding: 25px;
+            padding: 30px;
             display: flex;
             flex-direction: column;
-            width: 350px; 
-            flex-shrink: 0; 
+            width: 400px; /* Wider panel */
+            flex-shrink: 0;
+            gap: 25px; /* Space between sections */
         }
 
         .controls-panel h1 {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 25px;
-            color: #3498db; 
+            font-size: 2.2rem; /* Larger, bolder title */
+            font-weight: 700;
+            color: var(--accent-blue);
             text-align: center;
-            border-bottom: 2px solid #4a627d;
+            margin-bottom: 20px;
             padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
         }
 
+        /* Section headers */
+        .section-header {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 10px;
+        }
+
+        /* Button group */
         .button-group {
             display: flex;
-            gap: 15px; 
-            margin-bottom: 25px;
+            gap: 20px;
             justify-content: center;
+            margin-bottom: 20px;
         }
 
         .btn {
-            padding: 12px 25px; 
-            border-radius: 8px; 
-            font-weight: bold;
+            padding: 14px 30px;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            border: none; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            box-shadow: 0 4px 10px var(--shadow-light);
+            flex: 1; /* Make buttons expand evenly */
+            max-width: 180px;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px var(--shadow-medium);
         }
 
         .btn-start {
-            background-color: #2ecc71;
+            background-color: var(--success-green);
             color: white;
         }
         .btn-start:hover {
-            background-color: #27ae60;
+            background-color: #45a049;
         }
 
         .btn-stop {
-            background-color: #e74c3c; 
+            background-color: var(--error-red);
             color: white;
         }
         .btn-stop:hover {
-            background-color: #c0392b;
+            background-color: #e03e30;
         }
 
-        .status-message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        /* Status message */
+        #statusMessage {
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            font-weight: bold;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            margin-top: 10px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease-out;
         }
-        .status-info { background-color: #3498db; color: white; }
-        .status-warning { background-color: #f39c12; color: white; }
-        .status-success { background-color: #2ecc71; color: white; }
-        .status-error { background-color: #e74c3c; color: white; }
-        .status-done { background-color: #7f8c8d; color: white; } 
-        
+        .status-info { background-color: var(--info-blue); color: white; }
+        .status-warning { background-color: var(--warning-orange); color: white; }
+        .status-success { background-color: var(--success-green); color: white; }
+        .status-error { background-color: var(--error-red); color: white; }
+        .status-done { background-color: #607d8b; color: white; } /* Muted for completion */
+
+        /* Stats grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* Responsive grid */
+            gap: 15px;
             margin-bottom: 25px;
         }
         .stat-item {
-            background-color: #2c3e50; 
-            padding: 10px 15px;
-            border-radius: 6px;
+            background-color: var(--bg-dark);
+            padding: 15px 20px;
+            border-radius: 10px;
             font-size: 0.95em;
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: center;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px var(--shadow-light);
+        }
+        .stat-item .label {
+            color: #b0b0b0; /* Slightly lighter gray for labels */
+            margin-bottom: 5px;
+            font-weight: 400;
+            font-size: 0.85em;
         }
         .stat-item strong {
-            color: #3498db;
-            font-size: 1.1em;
+            color: var(--accent-blue);
+            font-size: 1.4em; /* Larger values */
+            font-weight: 700;
+        }
+        .stat-item small {
+            font-size: 0.75em;
+            color: #909090;
         }
 
+        /* Legend styling */
         .legend {
-            margin-top: auto; 
-            padding-top: 20px;
-            border-top: 1px solid #4a627d;
+            margin-top: auto; /* Pushes legend to the bottom */
+            padding-top: 25px;
+            border-top: 1px solid var(--border-color);
             font-size: 0.9em;
         }
         .legend h3 {
             font-size: 1.2em;
-            margin-bottom: 10px;
-            color: #ecf0f1;
+            margin-bottom: 12px;
+            color: var(--text-light);
         }
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .legend-color-box {
-            width: 24px;
-            height: 24px;
-            margin-right: 12px;
-            border: 1px solid #5a7590;
-            border-radius: 4px;
+            width: 28px; /* Larger boxes */
+            height: 28px;
+            margin-right: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             flex-shrink: 0;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Overlay messages for canvas */
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent overlay */
+            color: white;
+            font-size: 2.5rem; /* Larger text */
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            pointer-events: none; /* Allows clicks to pass through */
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.5s ease-out;
+            border-radius: 16px; /* Match container */
+        }
+        .canvas-overlay.show {
+            opacity: 1;
+        }
+        .canvas-overlay-content {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+            animation: scaleIn 0.6s ease-out;
+        }
+        .canvas-overlay-content span {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-top: 10px;
+            color: var(--text-light);
+        }
+
+        /* Keyframe animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <canvas id="gameCanvas"></canvas>
+        <div class="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+            <div id="canvasOverlay" class="canvas-overlay">
+                <div class="canvas-overlay-content">
+                    <span id="overlayMessage">Simulation Ready</span>
+                    <span id="overlaySubMessage">Click 'Start Simulation' to begin.</span>
+                </div>
+            </div>
+        </div>
         <div class="controls-panel">
             <h1>Neuro Car Parking</h1>
-            <div id="statusMessage" class="status-message status-info">Ready to Start</div>
+
             <div class="button-group">
                 <button id="startButton" class="btn btn-start">Start Simulation</button>
                 <button id="stopButton" class="btn btn-stop">Stop Simulation</button>
             </div>
 
+            <div id="statusMessage" class="status-message status-info">Ready to start.</div>
+
+            <div class="section-header">Simulation Progress</div>
             <div class="stats-grid">
-                <div class="stat-item">Generation: <strong id="genNum">0</strong> / <span id="maxGen">N/A</span></div>
-                <div class="stat-item">Car in Gen: <strong id="carInGen">0</strong> / <span id="maxCarInGen">N/A</span></div>
-                <div class="stat-item">Steps: <strong id="steps">0</strong> / <span id="maxSteps">N/A</span></div>
-                <div class="stat-item">Speed: <strong id="carSpeed">0.00</strong></div>
-                <div class="stat-item">Steering: <strong id="carSteering">0.00°</strong></div>
-                <div class="stat-item">Status: <strong id="carStatus">N/A</strong></div>
+                <div class="stat-item">
+                    <span class="label">Generation</span>
+                    <strong><span id="genNum">0</span> / <small id="maxGen">N/A</small></strong>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Car in Gen</span>
+                    <strong><span id="carInGen">0</span> / <small id="maxCarInGen">N/A</small></strong>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Steps Taken</span>
+                    <strong><span id="steps">0</span> / <small id="maxSteps">N/A</small></strong>
+                </div>
+            </div>
+
+            <div class="section-header">Current Car Stats</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="label">Speed</span>
+                    <strong><span id="carSpeed">0.00</span></strong>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Steering Angle</span>
+                    <strong><span id="carSteering">0.00°</span></strong>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Car Status</span>
+                    <strong><span id="carStatus">N/A</span></strong>
+                </div>
             </div>
 
             <div class="legend">
                 <h3>Legend:</h3>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #212F3D;"></div>Background</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #323232;"></div>Road</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #ffc800;"></div>Parking Spot</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #0000ff;"></div>Car (Moving)</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #00ff00;"></div>Car (Parked)</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #ff0000;"></div>Car (Collided)</div>
-                <div class="legend-item"><div class="legend-color-box" style="border: 2px dashed #ffffff; background: none;"></div>Target Parking Spot</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #cccccc;"></div>Sensor Rays (No Hit)</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #ff0000;"></div>Sensor Rays (Hit)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #0d0d1a;"></div>Simulation Area</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgb(50, 50, 50);"></div>Road</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgb(255, 200, 0);"></div>Parking Spot</div>
+                <div class="legend-item"><div class="legend-color-box" style="border: 2px dashed rgba(255, 255, 255, 0.7); background: none;"></div>Target Spot</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgb(0, 0, 255);"></div>Car (Moving)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgb(0, 255, 0);"></div>Car (Parked)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgb(255, 0, 0);"></div>Car (Collided)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgba(200, 200, 200, 0.3);"></div>Sensor Rays</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: rgba(255, 0, 0, 0.7);"></div>Sensor Hit</div>
             </div>
         </div>
     </div>
@@ -189,33 +333,39 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const statusMessageDiv = document.getElementById('statusMessage');
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        const overlayMessage = document.getElementById('overlayMessage');
+        const overlaySubMessage = document.getElementById('overlaySubMessage');
 
         let envData = null;
-        let simulationState = null; 
-        let animationFrameId = null; 
-        let pollIntervalId = null; 
+        let simulationState = null;
+        let animationFrameId = null;
+        let pollIntervalId = null;
 
-        const CAR_FILL_COLOR = 'rgb(0, 0, 255)';      
-        const CAR_PARKED_COLOR = 'rgb(0, 255, 0)';    
-        const CAR_COLLIDED_COLOR = 'rgb(255, 0, 0)';  
-        const ROAD_COLOR = 'rgb(50, 50, 50)';        
-        const PARKING_COLOR = 'rgb(255, 200, 0)';    
-        const TARGET_SPOT_BORDER_COLOR = 'rgba(255, 255, 255, 0.7)'; 
-        const SENSOR_RAY_COLOR = 'rgba(200, 200, 200, 0.3)'; 
-        const SENSOR_HIT_COLOR = 'rgba(255, 0, 0, 0.7)';   
+        // Drawing Constants (must match backend for accurate representation)
+        // Kept these as RGB for direct mapping to backend car state logic
+        const CAR_FILL_COLOR = 'rgb(0, 0, 255)';      // Blue
+        const CAR_PARKED_COLOR = 'rgb(0, 255, 0)';    // Green
+        const CAR_COLLIDED_COLOR = 'rgb(255, 0, 0)';  // Red
+        const ROAD_COLOR = 'rgb(50, 50, 50)';         // Dark grey
+        const PARKING_COLOR = 'rgb(255, 200, 0)';     // Orange-yellow
+        const TARGET_SPOT_BORDER_COLOR = 'rgba(255, 255, 255, 0.7)'; // White, semi-transparent
+        const SENSOR_RAY_COLOR = 'rgba(200, 200, 200, 0.3)'; // Light grey, transparent
+        const SENSOR_HIT_COLOR = 'rgba(255, 0, 0, 0.7)';   // Red, more opaque
 
-        const POLL_INTERVAL_MS = 25; 
-        
+        const POLL_INTERVAL_MS = 25; // Poll 40 times per second (matches backend update rate of 40Hz)
+
+        // --- Fetch Environment Data (Static Setup) ---
         async function fetchEnvironmentData() {
             try {
                 const response = await fetch('/get_environment_data');
                 envData = await response.json();
                 canvas.width = envData.screen_width;
                 canvas.height = envData.screen_height;
-
                 document.getElementById('maxGen').textContent = envData.max_generations;
                 document.getElementById('maxSteps').textContent = envData.max_steps_per_car;
-                document.getElementById('maxCarInGen').textContent = envData.max_cars_in_gen || 'N/A'; 
+                document.getElementById('maxCarInGen').textContent = envData.max_cars_in_gen || 'N/A';
                 console.log('Environment data loaded:', envData);
             } catch (error) {
                 console.error('Error fetching environment data:', error);
@@ -223,25 +373,109 @@
             }
         }
 
+        // --- Poll Simulation State (Dynamic Updates) ---
         async function pollSimulationState() {
             try {
                 const response = await fetch('/get_simulation_state');
                 const newState = await response.json();
                 if (JSON.stringify(simulationState) !== JSON.stringify(newState)) {
                     simulationState = newState;
-                    updateUI(); 
+                    updateUI();
+                    handleCanvasOverlay(); // Update overlay based on state
                 }
             } catch (error) {
                 console.error('Error polling simulation state:', error);
                 displayStatusMessage('Error communicating with simulation. Auto-stopping.', 'error');
-                stopSimulation(); 
+                stopSimulation();
             }
         }
 
+        // --- UI Updates ---
         function displayStatusMessage(message, type) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
-            statusDiv.className = `status-message status-${type}`; 
+            statusMessageDiv.textContent = message;
+            statusMessageDiv.className = `status-message status-${type}`;
+        }
+
+        function handleCanvasOverlay() {
+            if (!simulationState) {
+                canvasOverlay.classList.add('show');
+                overlayMessage.textContent = "Simulation Ready";
+                overlaySubMessage.textContent = "Click 'Start Simulation' to begin.";
+                return;
+            }
+
+            let showOverlay = false;
+            let message = "";
+            let subMessage = "";
+
+            switch (simulationState.status) {
+                case 'ready':
+                    message = "Simulation Ready";
+                    subMessage = "Click 'Start Simulation' to begin.";
+                    showOverlay = true;
+                    break;
+                case 'evolving':
+                    message = `Generation ${simulationState.current_generation}`;
+                    subMessage = "Evolving to next generation...";
+                    showOverlay = true;
+                    break;
+                case 'parked':
+                    message = "Car Parked!";
+                    subMessage = `Generation ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen}`;
+                    showOverlay = true; // Briefly show success overlay
+                    setTimeout(() => { // Hide after a short delay
+                        if (simulationState.status === 'parked') { // Check if state hasn't changed
+                            canvasOverlay.classList.remove('show');
+                        }
+                    }, 1000);
+                    break;
+                case 'collided':
+                    message = "Collision!";
+                    subMessage = `Car ${simulationState.current_car_in_gen} collided.`;
+                    showOverlay = true; // Briefly show error overlay
+                     setTimeout(() => { // Hide after a short delay
+                        if (simulationState.status === 'collided') {
+                            canvasOverlay.classList.remove('show');
+                        }
+                    }, 1000);
+                    break;
+                case 'failed_to_park':
+                    message = "Parking Failed";
+                    subMessage = `Max steps reached for Car ${simulationState.current_car_in_gen}.`;
+                    showOverlay = true;
+                     setTimeout(() => { // Hide after a short delay
+                        if (simulationState.status === 'failed_to_park') {
+                            canvasOverlay.classList.remove('show');
+                        }
+                    }, 1000);
+                    break;
+                case 'max_generations':
+                    message = "Simulation Complete!";
+                    subMessage = `Reached ${simulationState.current_generation} generations.`;
+                    showOverlay = true;
+                    break;
+                case 'stopped':
+                    message = "Simulation Stopped";
+                    subMessage = "Click 'Start' to resume or restart.";
+                    showOverlay = true;
+                    break;
+                case 'success': // When best car is replaying
+                    message = "Best Car Replay!";
+                    subMessage = "See the optimal solution in action.";
+                    showOverlay = true;
+                    break;
+                default: // 'moving', 'replaying_best' etc.
+                    showOverlay = false;
+                    break;
+            }
+
+            if (showOverlay) {
+                overlayMessage.textContent = message;
+                overlaySubMessage.textContent = subMessage;
+                canvasOverlay.classList.add('show');
+            } else {
+                canvasOverlay.classList.remove('show');
+            }
         }
 
         function updateUI() {
@@ -256,35 +490,37 @@
                 document.getElementById('carSteering').textContent = (simulationState.car.steering_angle * 180 / Math.PI).toFixed(2) + '°';
                 document.getElementById('carStatus').textContent = simulationState.status.replace(/_/g, ' ').toUpperCase();
 
-            
+                // Direct status message for the control panel
+                let displayMsg = '';
+                let msgType = 'info';
                 if (simulationState.status === 'parked') {
-                    displayStatusMessage(`Car parked successfully in Gen ${simulationState.current_generation}!`, 'success');
+                    displayMsg = `Car ${simulationState.current_car_in_gen} successfully parked!`; msgType = 'success';
                 } else if (simulationState.status === 'collided') {
-                    displayStatusMessage(`Car collided in Gen ${simulationState.current_generation}, Car ${simulationState.current_car_in_gen}!`, 'error');
+                    displayMsg = `Car ${simulationState.current_car_in_gen} collided!`; msgType = 'error';
                 } else if (simulationState.status === 'failed_to_park') {
-                     displayStatusMessage(`Car failed to park in Gen ${simulationState.current_generation}, Car ${simulationState.current_car_in_gen}! Max steps reached.`, 'warning');
+                    displayMsg = `Car ${simulationState.current_car_in_gen} failed to park (max steps).`; msgType = 'warning';
                 } else if (simulationState.status === 'max_generations') {
-                     displayStatusMessage(`Simulation finished: Max generations reached.`, 'done');
+                    displayMsg = `Simulation finished: Max generations reached.`; msgType = 'done';
                 } else if (simulationState.status === 'success') {
-                    displayStatusMessage(`Simulation Success! Best car replaying...`, 'success');
+                    displayMsg = `Simulation Success! Replaying best car...`; msgType = 'success';
                 } else if (simulationState.status === 'evolving') {
-                    displayStatusMessage(`Evolving to next generation...`, 'info');
+                    displayMsg = `Evolving to next generation...`; msgType = 'info';
                 } else if (simulationState.status === 'replaying_best') {
-                    displayStatusMessage(`Replaying best car found!`, 'info');
+                    displayMsg = `Replaying best car found!`; msgType = 'info';
                 } else if (simulationState.status === 'stopped') {
-                    displayStatusMessage(`Simulation stopped.`, 'done');
+                    displayMsg = `Simulation stopped.`; msgType = 'done';
                 } else {
-                    displayStatusMessage(`Generation ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen} is ${simulationState.status}...`, 'info');
+                    displayMsg = `Gen ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen} moving...`; msgType = 'info';
                 }
+                displayStatusMessage(displayMsg, msgType);
             } else {
-
                 document.getElementById('carSpeed').textContent = 'N/A';
                 document.getElementById('carSteering').textContent = 'N/A';
                 document.getElementById('carStatus').textContent = 'N/A';
             }
         }
 
-
+        // --- Canvas Drawing Functions (same as previous, but re-checked for consistency) ---
         function drawRoads() {
             if (!envData || !envData.road_segments) return;
             ctx.fillStyle = ROAD_COLOR;
@@ -300,22 +536,20 @@
                 ctx.fillRect(parking.x, parking.y, parking.width, parking.height);
             });
 
-
             if (simulationState && simulationState.target_spot_index !== -1) {
                 const targetSpot = envData.parking_spots[simulationState.target_spot_index];
                 if (targetSpot) {
                     ctx.strokeStyle = TARGET_SPOT_BORDER_COLOR;
                     ctx.lineWidth = 2;
-                    ctx.setLineDash([8, 8]); 
+                    ctx.setLineDash([8, 8]);
                     ctx.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
-                    ctx.setLineDash([]); 
+                    ctx.setLineDash([]);
                 }
             }
         }
 
         function drawCar(car) {
             if (!car || !car.corners) {
-                console.warn("Attempted to draw car with missing data:", car);
                 return;
             }
 
@@ -341,13 +575,12 @@
 
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.lineWidth = 2;
-
             const indicator_length = car.length / 2;
             const frontX = car.x + indicator_length * Math.cos(car.angle);
             const frontY = car.y + indicator_length * Math.sin(car.angle);
             ctx.beginPath();
             ctx.moveTo(car.x, car.y);
-            ctx.lineTo(frontX, frontY); 
+            ctx.lineTo(frontX, frontY);
             ctx.stroke();
         }
 
@@ -355,13 +588,14 @@
             if (!car || !envData) return;
 
             const sensorAngles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
-            const maxRayDist = envData.max_ray_dist || 300; 
+            const maxRayDist = envData.max_ray_dist || 300;
+
             sensorAngles.forEach(s_angle => {
                 const rayAngle = car.angle + s_angle;
                 let hitDist = maxRayDist;
                 let hitPoint = { x: car.x + maxRayDist * Math.cos(rayAngle), y: car.y + maxRayDist * Math.sin(rayAngle) };
 
-                for (let step = 1; step <= maxRayDist; step += 5) { 
+                for (let step = 1; step <= maxRayDist; step += 5) {
                     const test_x = car.x + step * Math.cos(rayAngle);
                     const test_y = car.y + step * Math.sin(rayAngle);
 
@@ -371,9 +605,8 @@
                         break;
                     }
 
-
                     let isValidPath = false;
-                    const test_point_rect = { x: test_x - 1, y: test_y - 1, width: 2, height: 2 }; 
+                    const test_point_rect = { x: test_x - 1, y: test_y - 1, width: 2, height: 2 };
                     for (const road of envData.road_segments) {
                         if (rectCollide(test_point_rect, road)) {
                             isValidPath = true;
@@ -389,7 +622,7 @@
                         }
                     }
 
-                    if (!isValidPath) { 
+                    if (!isValidPath) {
                         hitDist = step;
                         hitPoint = { x: test_x, y: test_y };
                         break;
@@ -412,16 +645,15 @@
                     rect1.y + rect1.height > rect2.y);
         }
 
+        // --- Main Animation Loop ---
         function animate() {
-           
             if (!envData) {
                 animationFrameId = requestAnimationFrame(animate);
                 return;
             }
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-            ctx.fillStyle = '#212F3D';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Background is handled by .canvas-container CSS now for simplicity
 
             drawRoads();
             drawParkingSpots();
@@ -434,17 +666,16 @@
             animationFrameId = requestAnimationFrame(animate);
         }
 
+        // --- Control Functions ---
         function startSimulation() {
             fetch('/start_sim', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     displayStatusMessage(data.message, data.type);
-                    if (data.type === 'info') {
-
+                    if (data.type === 'info' || data.type === 'warning') { // If it's already running or starting
                         if (!pollIntervalId) {
                             pollIntervalId = setInterval(pollSimulationState, POLL_INTERVAL_MS);
                         }
-
                         if (!animationFrameId) {
                             animationFrameId = requestAnimationFrame(animate);
                         }
@@ -461,17 +692,16 @@
                 .then(response => response.json())
                 .then(data => {
                     displayStatusMessage(data.message, data.type);
-
-                    if (data.type === 'done' || data.type === 'info') { 
-                        if (pollIntervalId) {
-                            clearInterval(pollIntervalId);
-                            pollIntervalId = null;
-                        }
-                        if (animationFrameId) {
-                            cancelAnimationFrame(animationFrameId);
-                            animationFrameId = null;
-                        }
+                    if (pollIntervalId) {
+                        clearInterval(pollIntervalId);
+                        pollIntervalId = null;
                     }
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                    // Show initial overlay state when stopped
+                    handleCanvasOverlay();
                 })
                 .catch(error => {
                     console.error('Error stopping simulation:', error);
@@ -479,11 +709,15 @@
                 });
         }
 
+        // --- Event Listeners and Initial Setup ---
         document.getElementById('startButton').addEventListener('click', startSimulation);
         document.getElementById('stopButton').addEventListener('click', stopSimulation);
-        
+
+        // Initial setup: Fetch environment data and start the animation loop once.
+        // The overlay will handle initial "Ready" message.
         fetchEnvironmentData().then(() => {
             animationFrameId = requestAnimationFrame(animate);
+            handleCanvasOverlay(); // Set initial overlay state
         });
     </script>
 </body>
