@@ -19,6 +19,14 @@
             --border-color: rgba(255, 255, 255, 0.1); /* Subtle white border */
             --shadow-light: rgba(0, 0, 0, 0.2);
             --shadow-medium: rgba(0, 0, 0, 0.4);
+
+            /* 3D Specific Colors */
+            --floor-color: #2a2a40;
+            --road-3d-color: #323232;
+            --parking-3d-color: #ffc800;
+            --car-3d-color: #0000ff;
+            --car-parked-3d-color: #00ff00;
+            --car-collided-3d-color: #ff0000;
         }
 
         body {
@@ -41,25 +49,50 @@
             border-radius: 16px;
             box-shadow: 0 10px 40px var(--shadow-medium);
             overflow: hidden;
-            max-width: 1400px; /* Increased max-width */
+            max-width: 1600px; /* Wider for two views */
             width: 100%;
-            min-height: 700px; /* Ensure sufficient height */
+            min-height: 700px;
         }
 
-        /* Canvas container and styling */
-        .canvas-container {
-            flex-grow: 1; /* Allows canvas to take available space */
+        .simulation-views-wrapper {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #0d0d1a; /* Even darker background for the simulation area */
-            border-right: 1px solid var(--border-color);
-            position: relative; /* For overlay messages */
+            flex-grow: 1;
+            /* Allows content to take up available space, but maintain a minimum */
+            min-width: 800px; /* Minimum width for the views area */
+            padding: 10px; /* Padding around both views */
+            gap: 10px; /* Gap between the two view panels */
         }
 
-        canvas {
+        .view-panel {
+            flex: 1; /* Each view takes equal space */
+            background-color: #0d0d1a; /* Even darker background for views */
+            border-radius: 12px; /* Slightly smaller border-radius for inner panels */
+            overflow: hidden; /* Important for canvas/3D container */
+            position: relative; /* For overlays */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color); /* Subtle border for each view */
+        }
+
+        .view-title {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-light);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 5px 15px;
+            border-radius: 8px;
+            z-index: 10; /* Ensure title is above canvas */
+        }
+
+        canvas, #threeJsCanvasContainer {
             display: block;
-            border-radius: 0 0 0 16px; /* Match container border-radius */
+            /* Flex properties for the parent will handle the sizing */
         }
 
         /* Control panel styling */
@@ -67,13 +100,14 @@
             padding: 30px;
             display: flex;
             flex-direction: column;
-            width: 400px; /* Wider panel */
+            width: 400px; /* Fixed width for control panel */
             flex-shrink: 0;
-            gap: 25px; /* Space between sections */
+            gap: 25px;
+            border-left: 1px solid var(--border-color); /* Separator */
         }
 
         .controls-panel h1 {
-            font-size: 2.2rem; /* Larger, bolder title */
+            font-size: 2.2rem;
             font-weight: 700;
             color: var(--accent-blue);
             text-align: center;
@@ -82,7 +116,6 @@
             border-bottom: 2px solid var(--border-color);
         }
 
-        /* Section headers */
         .section-header {
             font-size: 1.3rem;
             font-weight: 600;
@@ -92,7 +125,6 @@
             padding-left: 10px;
         }
 
-        /* Button group */
         .button-group {
             display: flex;
             gap: 20px;
@@ -110,7 +142,7 @@
             text-transform: uppercase;
             letter-spacing: 0.8px;
             box-shadow: 0 4px 10px var(--shadow-light);
-            flex: 1; /* Make buttons expand evenly */
+            flex: 1;
             max-width: 180px;
         }
 
@@ -135,7 +167,6 @@
             background-color: #e03e30;
         }
 
-        /* Status message */
         #statusMessage {
             padding: 15px;
             border-radius: 10px;
@@ -149,12 +180,11 @@
         .status-warning { background-color: var(--warning-orange); color: white; }
         .status-success { background-color: var(--success-green); color: white; }
         .status-error { background-color: var(--error-red); color: white; }
-        .status-done { background-color: #607d8b; color: white; } /* Muted for completion */
+        .status-done { background-color: #607d8b; color: white; }
 
-        /* Stats grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* Responsive grid */
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -170,14 +200,14 @@
             box-shadow: 0 2px 8px var(--shadow-light);
         }
         .stat-item .label {
-            color: #b0b0b0; /* Slightly lighter gray for labels */
+            color: #b0b0b0;
             margin-bottom: 5px;
             font-weight: 400;
             font-size: 0.85em;
         }
         .stat-item strong {
             color: var(--accent-blue);
-            font-size: 1.4em; /* Larger values */
+            font-size: 1.4em;
             font-weight: 700;
         }
         .stat-item small {
@@ -185,9 +215,8 @@
             color: #909090;
         }
 
-        /* Legend styling */
         .legend {
-            margin-top: auto; /* Pushes legend to the bottom */
+            margin-top: auto;
             padding-top: 25px;
             border-top: 1px solid var(--border-color);
             font-size: 0.9em;
@@ -203,7 +232,7 @@
             margin-bottom: 10px;
         }
         .legend-color-box {
-            width: 28px; /* Larger boxes */
+            width: 28px;
             height: 28px;
             margin-right: 15px;
             border: 1px solid var(--border-color);
@@ -212,7 +241,6 @@
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
-        /* Overlay messages for canvas */
         .canvas-overlay {
             position: absolute;
             top: 0;
@@ -222,15 +250,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent overlay */
+            background-color: rgba(0, 0, 0, 0.7);
             color: white;
-            font-size: 2.5rem; /* Larger text */
+            font-size: 2.5rem;
             font-weight: 700;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            pointer-events: none; /* Allows clicks to pass through */
-            opacity: 0; /* Hidden by default */
+            pointer-events: none;
+            opacity: 0;
             transition: opacity 0.5s ease-out;
-            border-radius: 16px; /* Match container */
+            border-radius: 12px; /* Match view-panel radius */
         }
         .canvas-overlay.show {
             opacity: 1;
@@ -250,7 +278,6 @@
             color: var(--text-light);
         }
 
-        /* Keyframe animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -264,15 +291,29 @@
 </head>
 <body>
     <div class="container">
-        <div class="canvas-container">
-            <canvas id="gameCanvas"></canvas>
-            <div id="canvasOverlay" class="canvas-overlay">
-                <div class="canvas-overlay-content">
-                    <span id="overlayMessage">Simulation Ready</span>
-                    <span id="overlaySubMessage">Click 'Start Simulation' to begin.</span>
+        <div class="simulation-views-wrapper">
+            <div class="view-panel">
+                <h2 class="view-title">2D Top-Down View</h2>
+                <canvas id="gameCanvas2D"></canvas>
+                <div id="canvasOverlay2D" class="canvas-overlay">
+                    <div class="canvas-overlay-content">
+                        <span id="overlayMessage2D"></span>
+                        <span id="overlaySubMessage2D"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="view-panel">
+                <h2 class="view-title">3D Driver's View</h2>
+                <div id="threeJsCanvasContainer" style="width: 100%; height: 100%;"></div>
+                <div id="canvasOverlay3D" class="canvas-overlay">
+                    <div class="canvas-overlay-content">
+                        <span id="overlayMessage3D"></span>
+                        <span id="overlaySubMessage3D"></span>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="controls-panel">
             <h1>Neuro Car Parking</h1>
 
@@ -330,39 +371,159 @@
         </div>
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const statusMessageDiv = document.getElementById('statusMessage');
-        const canvasOverlay = document.getElementById('canvasOverlay');
-        const overlayMessage = document.getElementById('overlayMessage');
-        const overlaySubMessage = document.getElementById('overlaySubMessage');
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
 
+        // --- DOM Elements ---
+        const canvas2D = document.getElementById('gameCanvas2D');
+        const ctx2D = canvas2D.getContext('2d');
+        const statusMessageDiv = document.getElementById('statusMessage');
+        const canvasOverlay2D = document.getElementById('canvasOverlay2D');
+        const overlayMessage2D = document.getElementById('overlayMessage2D');
+        const overlaySubMessage2D = document.getElementById('overlaySubMessage2D');
+        const canvasOverlay3D = document.getElementById('canvasOverlay3D'); // For mirroring
+        const overlayMessage3D = document.getElementById('overlayMessage3D');
+        const overlaySubMessage3D = document.getElementById('overlaySubMessage3D');
+        const threeJsCanvasContainer = document.getElementById('threeJsCanvasContainer');
+
+        // --- Global Simulation State ---
         let envData = null;
         let simulationState = null;
         let animationFrameId = null;
         let pollIntervalId = null;
 
-        // Drawing Constants (must match backend for accurate representation)
-        // Kept these as RGB for direct mapping to backend car state logic
-        const CAR_FILL_COLOR = 'rgb(0, 0, 255)';      // Blue
-        const CAR_PARKED_COLOR = 'rgb(0, 255, 0)';    // Green
-        const CAR_COLLIDED_COLOR = 'rgb(255, 0, 0)';  // Red
-        const ROAD_COLOR = 'rgb(50, 50, 50)';         // Dark grey
-        const PARKING_COLOR = 'rgb(255, 200, 0)';     // Orange-yellow
-        const TARGET_SPOT_BORDER_COLOR = 'rgba(255, 255, 255, 0.7)'; // White, semi-transparent
-        const SENSOR_RAY_COLOR = 'rgba(200, 200, 200, 0.3)'; // Light grey, transparent
-        const SENSOR_HIT_COLOR = 'rgba(255, 0, 0, 0.7)';   // Red, more opaque
+        // --- Constants (matching backend & CSS variables) ---
+        const POLL_INTERVAL_MS = 25;
 
-        const POLL_INTERVAL_MS = 25; // Poll 40 times per second (matches backend update rate of 40Hz)
+        // 2D Drawing Constants
+        const CAR_FILL_COLOR_2D = 'rgb(0, 0, 255)';
+        const CAR_PARKED_COLOR_2D = 'rgb(0, 255, 0)';
+        const CAR_COLLIDED_COLOR_2D = 'rgb(255, 0, 0)';
+        const ROAD_COLOR_2D = 'rgb(50, 50, 50)';
+        const PARKING_COLOR_2D = 'rgb(255, 200, 0)';
+        const TARGET_SPOT_BORDER_COLOR_2D = 'rgba(255, 255, 255, 0.7)';
+        const SENSOR_RAY_COLOR_2D = 'rgba(200, 200, 200, 0.3)';
+        const SENSOR_HIT_COLOR_2D = 'rgba(255, 0, 0, 0.7)';
+
+        // 3D Specifics
+        let scene, camera, renderer;
+        let car3D;
+        const CAR_HEIGHT_3D = 10; // Car height in 3D
+        const ROAD_HEIGHT_3D = 2; // Road thickness
+        const GROUND_LEVEL = 0; // The base level for all objects
+
+        // Materials for 3D objects
+        const carMaterialMoving = new THREE.MeshStandardMaterial({ color: 0x0000ff }); // Blue
+        const carMaterialParked = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green
+        const carMaterialCollided = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Red
+        const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x323232 }); // Dark grey
+        const parkingMaterial = new THREE.MeshStandardMaterial({ color: 0xffc800 }); // Orange-yellow
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x2a2a40 }); // Dark background
+
+        // --- Three.js Setup Functions ---
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--floor-color'));
+
+            // Camera: Perspective camera (FOV, aspect, near, far)
+            camera = new THREE.PerspectiveCamera(75, threeJsCanvasContainer.clientWidth / threeJsCanvasContainer.clientHeight, 0.1, 1000);
+            
+            // Initial camera position (will be updated dynamically)
+            camera.position.set(0, 100, 200);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(threeJsCanvasContainer.clientWidth, threeJsCanvasContainer.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            threeJsCanvasContainer.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft white light
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Brighter light from one direction
+            directionalLight.position.set(200, 300, 100); // x, y, z
+            scene.add(directionalLight);
+
+            // Ground Plane
+            const groundGeometry = new THREE.PlaneGeometry(envData.screen_width * 2, envData.screen_height * 2); // Larger than screen
+            const groundMesh = new THREE.Mesh(groundGeometry, floorMaterial);
+            groundMesh.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+            groundMesh.position.y = GROUND_LEVEL; // Set at ground level
+            scene.add(groundMesh);
+
+            // Add 3D roads and parking spots
+            addEnvironmentTo3DScene();
+
+            // Add the 3D car placeholder
+            const carGeometry = new THREE.BoxGeometry(envData.car_width, CAR_HEIGHT_3D, envData.car_length);
+            car3D = new THREE.Mesh(carGeometry, carMaterialMoving);
+            scene.add(car3D);
+
+            // Adjust Three.js scene origin to match 2D canvas origin (top-left)
+            // Three.js uses Y-up, Z-forward, X-right. Canvas uses Y-down, X-right.
+            // We map canvas X to Three.js X.
+            // We map canvas Y to Three.js Z (depth), but we'll need to negate it as canvas Y increases downwards.
+            // Y-coordinate in Three.js will be height.
+            scene.position.x = -envData.screen_width / 2;
+            scene.position.z = -envData.screen_height / 2; // This moves the origin to the center of the "floor"
+            // We want (0,0) of canvas to be top-left of the 3D scene's ground plane.
+            // So, center of 3D floor is (screen_width/2, 0, screen_height/2)
+            // And then we translate back
+            scene.position.x = -envData.screen_width / 2;
+            scene.position.y = GROUND_LEVEL; // Ensure scene is aligned to ground
+            scene.position.z = -envData.screen_height / 2; // This makes the top-left of the canvas (0,0,0) in 3D
+
+            // Handle window resizing
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = threeJsCanvasContainer.clientWidth / threeJsCanvasContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(threeJsCanvasContainer.clientWidth, threeJsCanvasContainer.clientHeight);
+        }
+
+        function addEnvironmentTo3DScene() {
+            envData.road_segments.forEach(road => {
+                const geometry = new THREE.BoxGeometry(road.width, ROAD_HEIGHT_3D, road.height);
+                const mesh = new THREE.Mesh(geometry, roadMaterial);
+                mesh.position.set(
+                    road.x + road.width / 2, // X center
+                    GROUND_LEVEL + ROAD_HEIGHT_3D / 2, // Y (height)
+                    road.y + road.height / 2 // Z (depth)
+                );
+                scene.add(mesh);
+            });
+
+            envData.parking_spots.forEach(parking => {
+                const geometry = new THREE.BoxGeometry(parking.width, ROAD_HEIGHT_3D + 0.1, parking.height); // Slightly raised
+                const mesh = new THREE.Mesh(geometry, parkingMaterial);
+                mesh.position.set(
+                    parking.x + parking.width / 2,
+                    GROUND_LEVEL + ROAD_HEIGHT_3D / 2 + 0.1, // Slight offset to be on top of road
+                    parking.y + parking.height / 2
+                );
+                // Rotate parking spot if needed (backend provides angle for 2D, apply to 3D Z-axis)
+                mesh.rotation.y = -parking.angle; // Adjust for 3D coordinate system (Y-axis up)
+                scene.add(mesh);
+            });
+        }
+
 
         // --- Fetch Environment Data (Static Setup) ---
         async function fetchEnvironmentData() {
             try {
                 const response = await fetch('/get_environment_data');
                 envData = await response.json();
-                canvas.width = envData.screen_width;
-                canvas.height = envData.screen_height;
+                
+                // Set 2D canvas dimensions
+                canvas2D.width = envData.screen_width;
+                canvas2D.height = envData.screen_height;
+                
+                // Initialize Three.js after envData is loaded and 2D canvas is sized
+                initThreeJS();
+
                 document.getElementById('maxGen').textContent = envData.max_generations;
                 document.getElementById('maxSteps').textContent = envData.max_steps_per_car;
                 document.getElementById('maxCarInGen').textContent = envData.max_cars_in_gen || 'N/A';
@@ -381,7 +542,7 @@
                 if (JSON.stringify(simulationState) !== JSON.stringify(newState)) {
                     simulationState = newState;
                     updateUI();
-                    handleCanvasOverlay(); // Update overlay based on state
+                    handleCanvasOverlays();
                 }
             } catch (error) {
                 console.error('Error polling simulation state:', error);
@@ -396,85 +557,92 @@
             statusMessageDiv.className = `status-message status-${type}`;
         }
 
-        function handleCanvasOverlay() {
-            if (!simulationState) {
-                canvasOverlay.classList.add('show');
-                overlayMessage.textContent = "Simulation Ready";
-                overlaySubMessage.textContent = "Click 'Start Simulation' to begin.";
-                return;
-            }
-
+        function handleCanvasOverlays() {
             let showOverlay = false;
             let message = "";
             let subMessage = "";
 
-            switch (simulationState.status) {
-                case 'ready':
-                    message = "Simulation Ready";
-                    subMessage = "Click 'Start Simulation' to begin.";
-                    showOverlay = true;
-                    break;
-                case 'evolving':
-                    message = `Generation ${simulationState.current_generation}`;
-                    subMessage = "Evolving to next generation...";
-                    showOverlay = true;
-                    break;
-                case 'parked':
-                    message = "Car Parked!";
-                    subMessage = `Generation ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen}`;
-                    showOverlay = true; // Briefly show success overlay
-                    setTimeout(() => { // Hide after a short delay
-                        if (simulationState.status === 'parked') { // Check if state hasn't changed
-                            canvasOverlay.classList.remove('show');
-                        }
-                    }, 1000);
-                    break;
-                case 'collided':
-                    message = "Collision!";
-                    subMessage = `Car ${simulationState.current_car_in_gen} collided.`;
-                    showOverlay = true; // Briefly show error overlay
-                     setTimeout(() => { // Hide after a short delay
-                        if (simulationState.status === 'collided') {
-                            canvasOverlay.classList.remove('show');
-                        }
-                    }, 1000);
-                    break;
-                case 'failed_to_park':
-                    message = "Parking Failed";
-                    subMessage = `Max steps reached for Car ${simulationState.current_car_in_gen}.`;
-                    showOverlay = true;
-                     setTimeout(() => { // Hide after a short delay
-                        if (simulationState.status === 'failed_to_park') {
-                            canvasOverlay.classList.remove('show');
-                        }
-                    }, 1000);
-                    break;
-                case 'max_generations':
-                    message = "Simulation Complete!";
-                    subMessage = `Reached ${simulationState.current_generation} generations.`;
-                    showOverlay = true;
-                    break;
-                case 'stopped':
-                    message = "Simulation Stopped";
-                    subMessage = "Click 'Start' to resume or restart.";
-                    showOverlay = true;
-                    break;
-                case 'success': // When best car is replaying
-                    message = "Best Car Replay!";
-                    subMessage = "See the optimal solution in action.";
-                    showOverlay = true;
-                    break;
-                default: // 'moving', 'replaying_best' etc.
-                    showOverlay = false;
-                    break;
+            if (!simulationState) {
+                message = "Simulation Ready";
+                subMessage = "Click 'Start Simulation' to begin.";
+                showOverlay = true;
+            } else {
+                switch (simulationState.status) {
+                    case 'ready':
+                        message = "Simulation Ready";
+                        subMessage = "Click 'Start Simulation' to begin.";
+                        showOverlay = true;
+                        break;
+                    case 'evolving':
+                        message = `Generation ${simulationState.current_generation}`;
+                        subMessage = "Evolving to next generation...";
+                        showOverlay = true;
+                        break;
+                    case 'parked':
+                        message = "Car Parked!";
+                        subMessage = `Generation ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen}`;
+                        showOverlay = true;
+                        setTimeout(() => {
+                            if (simulationState && simulationState.status === 'parked') {
+                                canvasOverlay2D.classList.remove('show');
+                                canvasOverlay3D.classList.remove('show');
+                            }
+                        }, 1000);
+                        break;
+                    case 'collided':
+                        message = "Collision!";
+                        subMessage = `Car ${simulationState.current_car_in_gen} collided.`;
+                        showOverlay = true;
+                        setTimeout(() => {
+                            if (simulationState && simulationState.status === 'collided') {
+                                canvasOverlay2D.classList.remove('show');
+                                canvasOverlay3D.classList.remove('show');
+                            }
+                        }, 1000);
+                        break;
+                    case 'failed_to_park':
+                        message = "Parking Failed";
+                        subMessage = `Max steps reached for Car ${simulationState.current_car_in_gen}.`;
+                        showOverlay = true;
+                        setTimeout(() => {
+                            if (simulationState && simulationState.status === 'failed_to_park') {
+                                canvasOverlay2D.classList.remove('show');
+                                canvasOverlay3D.classList.remove('show');
+                            }
+                        }, 1000);
+                        break;
+                    case 'max_generations':
+                        message = "Simulation Complete!";
+                        subMessage = `Reached ${simulationState.current_generation} generations.`;
+                        showOverlay = true;
+                        break;
+                    case 'stopped':
+                        message = "Simulation Stopped";
+                        subMessage = "Click 'Start' to resume or restart.";
+                        showOverlay = true;
+                        break;
+                    case 'success':
+                        message = "Best Car Replay!";
+                        subMessage = "See the optimal solution in action.";
+                        showOverlay = true;
+                        break;
+                    default:
+                        showOverlay = false;
+                        break;
+                }
             }
 
+            overlayMessage2D.textContent = message;
+            overlaySubMessage2D.textContent = subMessage;
+            overlayMessage3D.textContent = message;
+            overlaySubMessage3D.textContent = subMessage;
+
             if (showOverlay) {
-                overlayMessage.textContent = message;
-                overlaySubMessage.textContent = subMessage;
-                canvasOverlay.classList.add('show');
+                canvasOverlay2D.classList.add('show');
+                canvasOverlay3D.classList.add('show');
             } else {
-                canvasOverlay.classList.remove('show');
+                canvasOverlay2D.classList.remove('show');
+                canvasOverlay3D.classList.remove('show');
             }
         }
 
@@ -490,7 +658,6 @@
                 document.getElementById('carSteering').textContent = (simulationState.car.steering_angle * 180 / Math.PI).toFixed(2) + '°';
                 document.getElementById('carStatus').textContent = simulationState.status.replace(/_/g, ' ').toUpperCase();
 
-                // Direct status message for the control panel
                 let displayMsg = '';
                 let msgType = 'info';
                 if (simulationState.status === 'parked') {
@@ -520,71 +687,69 @@
             }
         }
 
-        // --- Canvas Drawing Functions (same as previous, but re-checked for consistency) ---
-        function drawRoads() {
+        // --- 2D Canvas Drawing Functions ---
+        function drawRoads2D() {
             if (!envData || !envData.road_segments) return;
-            ctx.fillStyle = ROAD_COLOR;
+            ctx2D.fillStyle = ROAD_COLOR_2D;
             envData.road_segments.forEach(road => {
-                ctx.fillRect(road.x, road.y, road.width, road.height);
+                ctx2D.fillRect(road.x, road.y, road.width, road.height);
             });
         }
 
-        function drawParkingSpots() {
+        function drawParkingSpots2D() {
             if (!envData || !envData.parking_spots) return;
-            ctx.fillStyle = PARKING_COLOR;
+            ctx2D.fillStyle = PARKING_COLOR_2D;
             envData.parking_spots.forEach(parking => {
-                ctx.fillRect(parking.x, parking.y, parking.width, parking.height);
+                ctx2D.fillRect(parking.x, parking.y, parking.width, parking.height);
             });
 
             if (simulationState && simulationState.target_spot_index !== -1) {
                 const targetSpot = envData.parking_spots[simulationState.target_spot_index];
                 if (targetSpot) {
-                    ctx.strokeStyle = TARGET_SPOT_BORDER_COLOR;
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([8, 8]);
-                    ctx.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
-                    ctx.setLineDash([]);
+                    ctx2D.strokeStyle = TARGET_SPOT_BORDER_COLOR_2D;
+                    ctx2D.lineWidth = 2;
+                    ctx2D.setLineDash([8, 8]);
+                    ctx2D.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
+                    ctx2D.setLineDash([]);
                 }
             }
         }
 
-        function drawCar(car) {
-            if (!car || !car.corners) {
-                return;
-            }
+        function drawCar2D(car) {
+            if (!car || !car.corners) return;
 
-            let carColor = CAR_FILL_COLOR;
+            let carColor = CAR_FILL_COLOR_2D;
             if (car.collided) {
-                carColor = CAR_COLLIDED_COLOR;
+                carColor = CAR_COLLIDED_COLOR_2D;
             } else if (car.is_parked) {
-                carColor = CAR_PARKED_COLOR;
+                carColor = CAR_PARKED_COLOR_2D;
             }
 
-            ctx.fillStyle = carColor;
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 1;
+            ctx2D.fillStyle = carColor;
+            ctx2D.strokeStyle = 'white';
+            ctx2D.lineWidth = 1;
 
-            ctx.beginPath();
-            ctx.moveTo(car.corners[0][0], car.corners[0][1]);
+            ctx2D.beginPath();
+            ctx2D.moveTo(car.corners[0][0], car.corners[0][1]);
             for (let i = 1; i < car.corners.length; i++) {
-                ctx.lineTo(car.corners[i][0], car.corners[i][1]);
+                ctx2D.lineTo(car.corners[i][0], car.corners[i][1]);
             }
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            ctx2D.closePath();
+            ctx2D.fill();
+            ctx2D.stroke();
 
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = 2;
+            ctx2D.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx2D.lineWidth = 2;
             const indicator_length = car.length / 2;
             const frontX = car.x + indicator_length * Math.cos(car.angle);
             const frontY = car.y + indicator_length * Math.sin(car.angle);
-            ctx.beginPath();
-            ctx.moveTo(car.x, car.y);
-            ctx.lineTo(frontX, frontY);
-            ctx.stroke();
+            ctx2D.beginPath();
+            ctx2D.moveTo(car.x, car.y);
+            ctx2D.lineTo(frontX, frontY);
+            ctx2D.stroke();
         }
 
-        function drawSensors(car) {
+        function drawSensors2D(car) {
             if (!car || !envData) return;
 
             const sensorAngles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
@@ -629,12 +794,12 @@
                     }
                 }
 
-                ctx.beginPath();
-                ctx.moveTo(car.x, car.y);
-                ctx.lineTo(hitPoint.x, hitPoint.y);
-                ctx.strokeStyle = (hitDist < maxRayDist) ? SENSOR_HIT_COLOR : SENSOR_RAY_COLOR;
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                ctx2D.beginPath();
+                ctx2D.moveTo(car.x, car.y);
+                ctx2D.lineTo(hitPoint.x, hitPoint.y);
+                ctx2D.strokeStyle = (hitDist < maxRayDist) ? SENSOR_HIT_COLOR_2D : SENSOR_RAY_COLOR_2D;
+                ctx2D.lineWidth = 1;
+                ctx2D.stroke();
             });
         }
 
@@ -645,23 +810,86 @@
                     rect1.y + rect1.height > rect2.y);
         }
 
+        // --- 3D Scene Update Logic ---
+        function update3DScene() {
+            if (!simulationState || !simulationState.car || !car3D) return;
+
+            const car = simulationState.car;
+            const screenW = envData.screen_width;
+            const screenH = envData.screen_height;
+
+            // Map 2D canvas coordinates (top-left origin, Y-down) to Three.js coordinates (center origin, Y-up, Z-depth)
+            // Three.js X = Canvas X
+            // Three.js Z = Canvas Y (but inverted for depth)
+            // Three.js Y = Height
+            car3D.position.x = car.x - screenW / 2;
+            car3D.position.z = -(car.y - screenH / 2); // Invert Y and treat as Z for depth
+            car3D.position.y = GROUND_LEVEL + CAR_HEIGHT_3D / 2; // Position centered on its height
+
+            // Rotation around Y-axis (vertical axis in 3D) for heading
+            // Canvas angle is 0 (right), -90 (up), -180 (left), etc.
+            // Three.js rotation.y is around vertical axis.
+            // A car facing "up" in 2D (angle = -PI/2) should be along negative Z in 3D (0 rotation around Y)
+            // A car facing "right" in 2D (angle = 0) should be along positive X in 3D (PI/2 rotation around Y)
+            // Need to adjust this mapping:
+            // Canvas angle `0` (right) should correspond to ` -Math.PI / 2` in Three.js `rotation.y` for a default Z-forward model.
+            // Canvas angle `Math.PI / 2` (down) should correspond to `Math.PI` in Three.js `rotation.y`.
+            // The mapping needed is `-(car.angle + Math.PI / 2)` or similar, depending on initial model orientation.
+            // Let's assume car model points along +Z initially: then angle 0 in 2D (right) maps to +X, so need -PI/2 rotation around Y.
+            car3D.rotation.y = -car.angle - Math.PI / 2; // This often works for Z-forward models if canvas 0 is right.
+
+            // Set car material based on status
+            if (car.collided) {
+                car3D.material = carMaterialCollided;
+            } else if (car.is_parked) {
+                car3D.material = carMaterialParked;
+            } else {
+                car3D.material = carMaterialMoving;
+            }
+
+            // Update 3D Camera to follow the car (Driver's POV, slightly behind and above)
+            const cameraOffsetDistance = 100; // How far behind the car
+            const cameraHeight = 50; // How high above the car
+            
+            // Calculate camera position relative to car, then convert to world coordinates
+            const cameraRelativeX = -cameraOffsetDistance * Math.cos(car.angle);
+            const cameraRelativeY = -cameraOffsetDistance * Math.sin(car.angle);
+
+            // Camera is positioned behind the car, slightly above
+            camera.position.x = car.x - screenW / 2 + cameraRelativeX;
+            camera.position.z = -(car.y - screenH / 2) - cameraRelativeY; // Inverted Z for Y-down canvas
+            camera.position.y = GROUND_LEVEL + cameraHeight; // Constant height above ground
+
+            // Camera looks at a point slightly in front of the car
+            const lookAtDistance = 50;
+            const lookAtX = car.x - screenW / 2 + lookAtDistance * Math.cos(car.angle);
+            const lookAtY = -(car.y - screenH / 2) + lookAtDistance * Math.sin(car.angle);
+            camera.lookAt(lookAtX, GROUND_LEVEL + CAR_HEIGHT_3D / 2, lookAtY); // Look at car's level
+
+            // Alternative: Third-person camera that orbits around a target point (e.g. the parking spot)
+            // For a "chase cam" that follows, you'd usually attach the camera to the car's object or calculate its position relative to the car.
+        }
+
         // --- Main Animation Loop ---
         function animate() {
-            if (!envData) {
+            if (!envData) { // Wait for envData to be loaded
                 animationFrameId = requestAnimationFrame(animate);
                 return;
             }
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Background is handled by .canvas-container CSS now for simplicity
-
-            drawRoads();
-            drawParkingSpots();
-
+            // 2D Canvas Rendering
+            ctx2D.clearRect(0, 0, canvas2D.width, canvas2D.height);
+            // Background is handled by .view-panel CSS
+            drawRoads2D();
+            drawParkingSpots2D();
             if (simulationState && simulationState.car) {
-                drawCar(simulationState.car);
-                drawSensors(simulationState.car);
+                drawCar2D(simulationState.car);
+                drawSensors2D(simulationState.car);
             }
+
+            // 3D Scene Rendering
+            update3DScene();
+            renderer.render(scene, camera);
 
             animationFrameId = requestAnimationFrame(animate);
         }
@@ -672,7 +900,7 @@
                 .then(response => response.json())
                 .then(data => {
                     displayStatusMessage(data.message, data.type);
-                    if (data.type === 'info' || data.type === 'warning') { // If it's already running or starting
+                    if (data.type === 'info' || data.type === 'warning') {
                         if (!pollIntervalId) {
                             pollIntervalId = setInterval(pollSimulationState, POLL_INTERVAL_MS);
                         }
@@ -700,8 +928,7 @@
                         cancelAnimationFrame(animationFrameId);
                         animationFrameId = null;
                     }
-                    // Show initial overlay state when stopped
-                    handleCanvasOverlay();
+                    handleCanvasOverlays(); // Show initial overlay state when stopped
                 })
                 .catch(error => {
                     console.error('Error stopping simulation:', error);
@@ -714,10 +941,9 @@
         document.getElementById('stopButton').addEventListener('click', stopSimulation);
 
         // Initial setup: Fetch environment data and start the animation loop once.
-        // The overlay will handle initial "Ready" message.
         fetchEnvironmentData().then(() => {
             animationFrameId = requestAnimationFrame(animate);
-            handleCanvasOverlay(); // Set initial overlay state
+            handleCanvasOverlays(); // Set initial overlay state
         });
     </script>
 </body>
