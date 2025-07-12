@@ -3,227 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neuro Car Parking</title>
+    <title>AI Car Parking Simulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c3e50;
+            color: #ecf0f1;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
+            align-items: flex-start; 
             min-height: 100vh;
-            background-color: #333;
-            color: #eee;
+            padding: 20px;
             margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        .navbar {
+
+        .container {
+            display: flex;
+            background-color: #34495e; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            max-width: 1200px; 
             width: 100%;
-            background-color: #222;
-            padding: 10px 20px;
+        }
+
+        canvas {
+            border-right: 1px solid #4a627d;
+            background-color: #212F3D; 
+            display: block; 
+        }
+
+        .controls-panel {
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            width: 350px; 
+            flex-shrink: 0; 
+        }
+
+        .controls-panel h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #3498db; 
+            text-align: center;
+            border-bottom: 2px solid #4a627d;
+            padding-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px; 
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px; 
+            border-radius: 8px; 
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            border: none; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-start {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .btn-start:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-stop {
+            background-color: #e74c3c; 
+            color: white;
+        }
+        .btn-stop:hover {
+            background-color: #c0392b;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .status-info { background-color: #3498db; color: white; }
+        .status-warning { background-color: #f39c12; color: white; }
+        .status-success { background-color: #2ecc71; color: white; }
+        .status-error { background-color: #e74c3c; color: white; }
+        .status-done { background-color: #7f8c8d; color: white; } 
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+            margin-bottom: 25px;
+        }
+        .stat-item {
+            background-color: #2c3e50; 
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.95em;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
-        .navbar-left {
-            font-size: 0.9rem;
-            font-weight: bold;
+        .stat-item strong {
+            color: #3498db;
+            font-size: 1.1em;
         }
-        .navbar-right {
+
+        .legend {
+            margin-top: auto; 
+            padding-top: 20px;
+            border-top: 1px solid #4a627d;
+            font-size: 0.9em;
+        }
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #ecf0f1;
+        }
+        .legend-item {
             display: flex;
-            gap: 10px;
-        }
-        .navbar-button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: background-color 0.3s ease, transform 0.1s ease;
-        }
-        .navbar-button:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-        }
-        .container {
-            background-color: #222;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 20px;
-            width: 100%;
-            max-width: 1050px;
-            margin: 20px auto;
+            margin-bottom: 8px;
         }
-        canvas {
-            background-color: rgb(150, 150, 150);
-            border-radius: 10px;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-            max-width: 100%;
-            height: auto;
-            border: 2px solid #555;
-        }
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s ease, transform 0.1s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-        button:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-        }
-        button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        button:disabled {
-            background-color: #777;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .info-panel {
-            background-color: #3a3a3a;
-            border-radius: 8px;
-            padding: 10px 15px;
-            width: 100%;
-            max-width: 960px;
-            text-align: center;
-            font-size: 0.9rem;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
-        }
-        .status-message {
-            margin-top: 10px;
-            padding: 8px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        .status-message.success { background-color: #28a745; }
-        .status-message.info { background-color: #17a2b8; }
-        .status-message.warning { background-color: #ffc107; color: #333; }
-        .status-message.error { background-color: #dc3545; }
-        .status-message.done { background-color: #6c757d; }
-        footer {
-            width: 100%;
-            text-align: center;
-            padding: 10px 0;
-            background-color: #222;
-            color: #bbb;
-            font-size: 0.8rem;
-            margin-top: auto;
+        .legend-color-box {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border: 1px solid #5a7590;
+            border-radius: 4px;
+            flex-shrink: 0;
         }
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    <nav class="navbar">
-        <div class="navbar-left">
-            Created by Lucifer - 2025
-        </div>
-        <div class="navbar-right">
-            <a href="https://github.com/dkconnect/neuro-car-park" target="_blank" class="navbar-button">GitHub</a>
-            <a href="/study.html" class="navbar-button">Study Paper</a>
-        </div>
-    </nav>
+<body>
     <div class="container">
-        <h1 class="text-2xl font-bold text-white mb-4">Neuro Car Parking</h1>
-        <canvas id="gameCanvas" width="1000" height="800" class="rounded-lg"></canvas>
-        <div class="controls">
-            <button id="startButton">Start Simulation</button>
-            <button id="stopButton" disabled>Stop Simulation</button>
-        </div>
-        <div class="info-panel">
-            <p>Generation: <span id="currentGen">0</span></p>
-            <p>Car in Gen: <span id="currentCar">0</span></p>
-            <p>Steps: <span id="currentSteps">0</span> / <span id="maxSteps">0</span></p>
-            <p>Speed: <span id="carSpeed">0.00</span> | Steering: <span id="carSteering">0.0</span>°</p>
-            <div id="simulationStatus" class="status-message">Ready.</div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls-panel">
+            <h1>Neuro Car Parking</h1>
+            <div id="statusMessage" class="status-message status-info">Ready to Start</div>
+            <div class="button-group">
+                <button id="startButton" class="btn btn-start">Start Simulation</button>
+                <button id="stopButton" class="btn btn-stop">Stop Simulation</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">Generation: <strong id="genNum">0</strong> / <span id="maxGen">N/A</span></div>
+                <div class="stat-item">Car in Gen: <strong id="carInGen">0</strong> / <span id="maxCarInGen">N/A</span></div>
+                <div class="stat-item">Steps: <strong id="steps">0</strong> / <span id="maxSteps">N/A</span></div>
+                <div class="stat-item">Speed: <strong id="carSpeed">0.00</strong></div>
+                <div class="stat-item">Steering: <strong id="carSteering">0.00°</strong></div>
+                <div class="stat-item">Status: <strong id="carStatus">N/A</strong></div>
+            </div>
+
+            <div class="legend">
+                <h3>Legend:</h3>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #212F3D;"></div>Background</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #323232;"></div>Road</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #ffc800;"></div>Parking Spot</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #0000ff;"></div>Car (Moving)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #00ff00;"></div>Car (Parked)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #ff0000;"></div>Car (Collided)</div>
+                <div class="legend-item"><div class="legend-color-box" style="border: 2px dashed #ffffff; background: none;"></div>Target Parking Spot</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #cccccc;"></div>Sensor Rays (No Hit)</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #ff0000;"></div>Sensor Rays (Hit)</div>
+            </div>
         </div>
     </div>
-    <footer>
-        Neural Algorithm Car Parking Simulation | Created by Lucifer - 2025
-    </footer>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let environment = { roadSegments: [], parkingSpots: [], screen: { width: 0, height: 0 } };
-        let currentCarData = null;
-        let targetSpotIndex = -1;
-        const COLORS = {
-            "WHITE": 'rgb(255, 255, 255)', "BLACK": 'rgb(0, 0, 0)', "GRAY": 'rgb(150, 150, 150)',
-            "ROAD_COLOR": 'rgb(50, 50, 50)', "PARKING_COLOR": 'rgb(255, 200, 0)',
-            "RED": 'rgb(255, 0, 0)', "GREEN": 'rgb(0, 255, 0)', "BLUE": 'rgb(0, 0, 255)'
-        };
-        const startButton = document.getElementById('startButton');
-        const stopButton = document.getElementById('stopButton');
-        const currentGenSpan = document.getElementById('currentGen');
-        const currentCarSpan = document.getElementById('currentCar');
-        const currentStepsSpan = document.getElementById('currentSteps');
-        const maxStepsSpan = document.getElementById('maxSteps');
-        const carSpeedSpan = document.getElementById('carSpeed');
-        const carSteeringSpan = document.getElementById('carSteering');
-        const simulationStatusDiv = document.getElementById('simulationStatus');
-        let pollInterval = null;
 
-        function drawEnvironment() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = COLORS.GRAY;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = COLORS.ROAD_COLOR;
-            environment.roadSegments.forEach(road => {
-                ctx.fillRect(road.x, road.y, road.width, road.height);
-                if (road.width > road.height) {
-                    for (let x_mark = road.x + 20; x_mark < road.x + road.width - 20; x_mark += 40) {
-                        ctx.strokeStyle = COLORS.WHITE;
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(x_mark, road.y + road.height / 2);
-                        ctx.lineTo(x_mark + 20, road.y + road.height / 2);
-                        ctx.stroke();
-                    }
+        let envData = null;
+        let simulationState = null; 
+        let animationFrameId = null; 
+        let pollIntervalId = null; 
+
+        const CAR_FILL_COLOR = 'rgb(0, 0, 255)';      
+        const CAR_PARKED_COLOR = 'rgb(0, 255, 0)';    
+        const CAR_COLLIDED_COLOR = 'rgb(255, 0, 0)';  
+        const ROAD_COLOR = 'rgb(50, 50, 50)';        
+        const PARKING_COLOR = 'rgb(255, 200, 0)';    
+        const TARGET_SPOT_BORDER_COLOR = 'rgba(255, 255, 255, 0.7)'; 
+        const SENSOR_RAY_COLOR = 'rgba(200, 200, 200, 0.3)'; 
+        const SENSOR_HIT_COLOR = 'rgba(255, 0, 0, 0.7)';   
+
+        const POLL_INTERVAL_MS = 25; 
+        
+        async function fetchEnvironmentData() {
+            try {
+                const response = await fetch('/get_environment_data');
+                envData = await response.json();
+                canvas.width = envData.screen_width;
+                canvas.height = envData.screen_height;
+
+                document.getElementById('maxGen').textContent = envData.max_generations;
+                document.getElementById('maxSteps').textContent = envData.max_steps_per_car;
+                document.getElementById('maxCarInGen').textContent = envData.max_cars_in_gen || 'N/A'; 
+                console.log('Environment data loaded:', envData);
+            } catch (error) {
+                console.error('Error fetching environment data:', error);
+                displayStatusMessage('Failed to load environment data. Check server.', 'error');
+            }
+        }
+
+        async function pollSimulationState() {
+            try {
+                const response = await fetch('/get_simulation_state');
+                const newState = await response.json();
+                if (JSON.stringify(simulationState) !== JSON.stringify(newState)) {
+                    simulationState = newState;
+                    updateUI(); 
+                }
+            } catch (error) {
+                console.error('Error polling simulation state:', error);
+                displayStatusMessage('Error communicating with simulation. Auto-stopping.', 'error');
+                stopSimulation(); 
+            }
+        }
+
+        function displayStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`; 
+        }
+
+        function updateUI() {
+            if (!simulationState) return;
+
+            document.getElementById('genNum').textContent = simulationState.current_generation;
+            document.getElementById('carInGen').textContent = simulationState.current_car_in_gen;
+            document.getElementById('steps').textContent = simulationState.steps;
+
+            if (simulationState.car) {
+                document.getElementById('carSpeed').textContent = simulationState.car.speed.toFixed(2);
+                document.getElementById('carSteering').textContent = (simulationState.car.steering_angle * 180 / Math.PI).toFixed(2) + '°';
+                document.getElementById('carStatus').textContent = simulationState.status.replace(/_/g, ' ').toUpperCase();
+
+            
+                if (simulationState.status === 'parked') {
+                    displayStatusMessage(`Car parked successfully in Gen ${simulationState.current_generation}!`, 'success');
+                } else if (simulationState.status === 'collided') {
+                    displayStatusMessage(`Car collided in Gen ${simulationState.current_generation}, Car ${simulationState.current_car_in_gen}!`, 'error');
+                } else if (simulationState.status === 'failed_to_park') {
+                     displayStatusMessage(`Car failed to park in Gen ${simulationState.current_generation}, Car ${simulationState.current_car_in_gen}! Max steps reached.`, 'warning');
+                } else if (simulationState.status === 'max_generations') {
+                     displayStatusMessage(`Simulation finished: Max generations reached.`, 'done');
+                } else if (simulationState.status === 'success') {
+                    displayStatusMessage(`Simulation Success! Best car replaying...`, 'success');
+                } else if (simulationState.status === 'evolving') {
+                    displayStatusMessage(`Evolving to next generation...`, 'info');
+                } else if (simulationState.status === 'replaying_best') {
+                    displayStatusMessage(`Replaying best car found!`, 'info');
+                } else if (simulationState.status === 'stopped') {
+                    displayStatusMessage(`Simulation stopped.`, 'done');
                 } else {
-                    for (let y_mark = road.y + 20; y_mark < road.y + road.height - 20; y_mark += 40) {
-                        ctx.strokeStyle = COLORS.WHITE;
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(road.x + road.width / 2, y_mark);
-                        ctx.lineTo(road.x + road.width / 2, y_mark + 20);
-                        ctx.stroke();
-                    }
+                    displayStatusMessage(`Generation ${simulationState.current_generation} / Car ${simulationState.current_car_in_gen} is ${simulationState.status}...`, 'info');
                 }
+            } else {
+
+                document.getElementById('carSpeed').textContent = 'N/A';
+                document.getElementById('carSteering').textContent = 'N/A';
+                document.getElementById('carStatus').textContent = 'N/A';
+            }
+        }
+
+
+        function drawRoads() {
+            if (!envData || !envData.road_segments) return;
+            ctx.fillStyle = ROAD_COLOR;
+            envData.road_segments.forEach(road => {
+                ctx.fillRect(road.x, road.y, road.width, road.height);
             });
-            environment.parkingSpots.forEach((parking, index) => {
-                ctx.fillStyle = COLORS.PARKING_COLOR;
+        }
+
+        function drawParkingSpots() {
+            if (!envData || !envData.parking_spots) return;
+            ctx.fillStyle = PARKING_COLOR;
+            envData.parking_spots.forEach(parking => {
                 ctx.fillRect(parking.x, parking.y, parking.width, parking.height);
-                if (index === targetSpotIndex) {
-                    ctx.strokeStyle = COLORS.GREEN;
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(parking.x, parking.y, parking.width, parking.height);
-                }
             });
+
+
+            if (simulationState && simulationState.target_spot_index !== -1) {
+                const targetSpot = envData.parking_spots[simulationState.target_spot_index];
+                if (targetSpot) {
+                    ctx.strokeStyle = TARGET_SPOT_BORDER_COLOR;
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 8]); 
+                    ctx.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
+                    ctx.setLineDash([]); 
+                }
+            }
         }
 
         function drawCar(car) {
             if (!car || !car.corners) {
-                console.warn("drawCar: Car data or corners missing", car);
+                console.warn("Attempted to draw car with missing data:", car);
                 return;
             }
-            ctx.fillStyle = `rgb(${car.color[0]}, ${car.color[1]}, ${car.color[2]})`;
+
+            let carColor = CAR_FILL_COLOR;
+            if (car.collided) {
+                carColor = CAR_COLLIDED_COLOR;
+            } else if (car.is_parked) {
+                carColor = CAR_PARKED_COLOR;
+            }
+
+            ctx.fillStyle = carColor;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+
             ctx.beginPath();
             ctx.moveTo(car.corners[0][0], car.corners[0][1]);
             for (let i = 1; i < car.corners.length; i++) {
@@ -231,117 +337,154 @@
             }
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = COLORS.RED;
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.lineWidth = 2;
+
+            const indicator_length = car.length / 2;
+            const frontX = car.x + indicator_length * Math.cos(car.angle);
+            const frontY = car.y + indicator_length * Math.sin(car.angle);
             ctx.beginPath();
             ctx.moveTo(car.x, car.y);
-            const front_x = car.x + car.length / 2 * Math.cos(car.angle);
-            const front_y = car.y + car.length / 2 * Math.sin(car.angle);
-            ctx.lineTo(front_x, front_y);
+            ctx.lineTo(frontX, frontY); 
             ctx.stroke();
         }
 
-        function updateUI(data) {
-            currentGenSpan.textContent = data.current_generation;
-            currentCarSpan.textContent = `${data.current_car_in_gen} / ${data.max_cars_in_gen}`;
-            currentStepsSpan.textContent = data.steps;
-            maxStepsSpan.textContent = data.max_steps;
-            carSpeedSpan.textContent = data.car ? data.car.speed.toFixed(2) : '0.00';
-            carSteeringSpan.textContent = data.car ? (data.car.steering_angle * 180 / Math.PI).toFixed(1) : '0.0';
-            simulationStatusDiv.textContent = `Car Status: ${data.status.replace(/_/g, ' ').toUpperCase()}`;
-            simulationStatusDiv.className = 'status-message';
-            if (data.status.includes('error')) {
-                simulationStatusDiv.classList.add('error');
-            } else if (data.status === 'success' || data.status === 'parked') {
-                simulationStatusDiv.classList.add('success');
-                clearInterval(pollInterval);
-                startButton.disabled = false;
-                stopButton.disabled = true;
-            } else if (data.status === 'failed_to_park' || data.status === 'max_generations') {
-                simulationStatusDiv.classList.add('warning');
-            } else if (data.status === 'done') {
-                simulationStatusDiv.classList.add('done');
-                clearInterval(pollInterval);
-                startButton.disabled = false;
-                stopButton.disabled = true;
-            } else {
-                simulationStatusDiv.classList.add('info');
-            }
+        function drawSensors(car) {
+            if (!car || !envData) return;
+
+            const sensorAngles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
+            const maxRayDist = envData.max_ray_dist || 300; 
+            sensorAngles.forEach(s_angle => {
+                const rayAngle = car.angle + s_angle;
+                let hitDist = maxRayDist;
+                let hitPoint = { x: car.x + maxRayDist * Math.cos(rayAngle), y: car.y + maxRayDist * Math.sin(rayAngle) };
+
+                for (let step = 1; step <= maxRayDist; step += 5) { 
+                    const test_x = car.x + step * Math.cos(rayAngle);
+                    const test_y = car.y + step * Math.sin(rayAngle);
+
+                    if (!(0 <= test_x <= envData.screen_width && 0 <= test_y <= envData.screen_height)) {
+                        hitDist = step;
+                        hitPoint = { x: test_x, y: test_y };
+                        break;
+                    }
+
+
+                    let isValidPath = false;
+                    const test_point_rect = { x: test_x - 1, y: test_y - 1, width: 2, height: 2 }; 
+                    for (const road of envData.road_segments) {
+                        if (rectCollide(test_point_rect, road)) {
+                            isValidPath = true;
+                            break;
+                        }
+                    }
+                    if (!isValidPath) {
+                        for (const parking of envData.parking_spots) {
+                            if (rectCollide(test_point_rect, parking)) {
+                                isValidPath = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isValidPath) { 
+                        hitDist = step;
+                        hitPoint = { x: test_x, y: test_y };
+                        break;
+                    }
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(car.x, car.y);
+                ctx.lineTo(hitPoint.x, hitPoint.y);
+                ctx.strokeStyle = (hitDist < maxRayDist) ? SENSOR_HIT_COLOR : SENSOR_RAY_COLOR;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+        }
+
+        function rectCollide(rect1, rect2) {
+            return (rect1.x < rect2.x + rect2.width &&
+                    rect1.x + rect1.width > rect2.x &&
+                    rect1.y < rect2.y + rect2.height &&
+                    rect1.y + rect1.height > rect2.y);
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawEnvironment();
-            if (currentCarData) {
-                drawCar(currentCarData);
+           
+            if (!envData) {
+                animationFrameId = requestAnimationFrame(animate);
+                return;
             }
-            requestAnimationFrame(animate);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.fillStyle = '#212F3D';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawRoads();
+            drawParkingSpots();
+
+            if (simulationState && simulationState.car) {
+                drawCar(simulationState.car);
+                drawSensors(simulationState.car);
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
         }
 
-        function pollSimulationState() {
-            fetch('/get_simulation_state')
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Poll data:", data);
-                    currentCarData = data.car;
-                    targetSpotIndex = data.target_spot_index;
-                    updateUI(data);
-                })
-                .catch(error => {
-                    console.error("Polling error:", error);
-                    simulationStatusDiv.textContent = `Error: ${error.message}`;
-                    simulationStatusDiv.className = 'status-message error';
-                    clearInterval(pollInterval);
-                    startButton.disabled = false;
-                    stopButton.disabled = true;
-                });
-        }
-
-        fetch('/get_environment_data')
-            .then(response => response.json())
-            .then(data => {
-                console.log('Environment data:', data);
-                environment.roadSegments = data.road_segments;
-                environment.parkingSpots = data.parking_spots;
-                environment.screen.width = data.screen_width;
-                environment.screen.height = data.screen_height;
-                canvas.width = data.screen_width;
-                canvas.height = data.screen_height;
-                drawEnvironment();
-            })
-            .catch(error => console.error("Environment fetch error:", error));
-
-        startButton.addEventListener('click', () => {
-            startButton.disabled = true;
-            stopButton.disabled = false;
-            simulationStatusDiv.textContent = 'Simulation started...';
-            simulationStatusDiv.className = 'status-message info';
+        function startSimulation() {
             fetch('/start_sim', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
-                    simulationStatusDiv.textContent = data.message;
-                    simulationStatusDiv.className = `status-message ${data.type}`;
+                    displayStatusMessage(data.message, data.type);
                     if (data.type === 'info') {
-                        pollInterval = setInterval(pollSimulationState, 100);
-                    }
-                });
-        });
 
-        stopButton.addEventListener('click', () => {
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            simulationStatusDiv.textContent = 'Stopping simulation...';
-            simulationStatusDiv.className = 'status-message warning';
+                        if (!pollIntervalId) {
+                            pollIntervalId = setInterval(pollSimulationState, POLL_INTERVAL_MS);
+                        }
+
+                        if (!animationFrameId) {
+                            animationFrameId = requestAnimationFrame(animate);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting simulation:', error);
+                    displayStatusMessage('Failed to start simulation. Server error.', 'error');
+                });
+        }
+
+        function stopSimulation() {
             fetch('/stop_sim', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
-                    simulationStatusDiv.textContent = data.message;
-                    simulationStatusDiv.className = `status-message ${data.type}`;
-                    clearInterval(pollInterval);
-                });
-        });
+                    displayStatusMessage(data.message, data.type);
 
-        animate();
+                    if (data.type === 'done' || data.type === 'info') { 
+                        if (pollIntervalId) {
+                            clearInterval(pollIntervalId);
+                            pollIntervalId = null;
+                        }
+                        if (animationFrameId) {
+                            cancelAnimationFrame(animationFrameId);
+                            animationFrameId = null;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error stopping simulation:', error);
+                    displayStatusMessage('Failed to stop simulation. Server error.', 'error');
+                });
+        }
+
+        document.getElementById('startButton').addEventListener('click', startSimulation);
+        document.getElementById('stopButton').addEventListener('click', stopSimulation);
+        
+        fetchEnvironmentData().then(() => {
+            animationFrameId = requestAnimationFrame(animate);
+        });
     </script>
 </body>
 </html>
